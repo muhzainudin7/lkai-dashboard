@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2a78d6">
+<title>LKAI OPK 2 — Realisasi vs Target AKI 2026</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --border: rgba(11, 11, 11, 0.10);
+    --fill: #2a78d6;
+    --track: #cde2fb;
+    --err: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --border: rgba(255, 255, 255, 0.10);
+      --fill: #3987e5;
+      --track: #104281;
+      --err: #e66767;
+    }
+  }
+  html { background: var(--page); }
+  body {
+    margin: 0;
+    padding: 20px 14px 40px;
+    background: var(--page);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.45;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+
+  header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  header .eyebrow {
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 4px;
+  }
+  header h1 { font-size: 19px; margin: 0; line-height: 1.3; text-wrap: balance; }
+  header .stamp { font-size: 12px; color: var(--ink-2); margin: 4px 0 0; }
+  #btn-refresh {
+    flex: none; margin-top: 2px;
+    font: 600 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--fill); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 14px; cursor: pointer;
+  }
+  #btn-refresh:focus-visible { outline: 2px solid var(--fill); outline-offset: 2px; }
+  #btn-refresh:disabled { color: var(--muted); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  /* Status: loading & error */
+  #status { text-align: center; padding: 28px 16px; }
+  .spin {
+    width: 22px; height: 22px; margin: 0 auto 10px;
+    border: 3px solid var(--track); border-top-color: var(--fill);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.4s; } }
+  #status .msg { font-size: 13px; color: var(--ink-2); }
+  #status.error .msg { color: var(--err); }
+  #btn-retry {
+    margin-top: 12px;
+    font: 600 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: #fff; background: var(--fill);
+    border: none; border-radius: 8px; padding: 10px 18px; cursor: pointer;
+  }
+
+  /* Hero */
+  .hero { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .hero .big { font-size: 48px; font-weight: 600; line-height: 1; }
+  .hero .ctx { font-size: 13px; color: var(--ink-2); }
+  .hero .ctx b { color: var(--ink); font-weight: 600; }
+
+  /* Chart */
+  .card h2 { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
+  .card .sub { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+  .legend { display: flex; gap: 14px; margin: 0 0 12px; font-size: 12px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .key { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+  .key.fill { background: var(--fill); }
+  .key.track { background: var(--track); }
+
+  .row { margin: 0 0 12px; }
+  .row:last-child { margin-bottom: 0; }
+  .row .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .row .name { font-size: 13px; font-weight: 500; }
+  .row .pct { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .meter { position: relative; height: 16px; background: var(--track); border-radius: 4px; overflow: hidden; }
+  .meter .bar { position: absolute; inset: 0 auto 0 0; background: var(--fill); border-radius: 0 4px 4px 0; }
+  .row .vals { font-size: 11px; color: var(--muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
+
+  /* Table */
+  .tbl-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  th, td { padding: 6px 5px; white-space: nowrap; }
+  th:first-child, td:first-child { padding-left: 0; }
+  th:last-child, td:last-child { padding-right: 0; }
+  thead th {
+    font-size: 10px; letter-spacing: 0.03em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600; text-align: right;
+    border-bottom: 1px solid var(--grid);
+  }
+  thead th:first-child { text-align: left; }
+  td { border-bottom: 1px solid var(--grid); text-align: right; font-variant-numeric: tabular-nums; }
+  td:first-child { text-align: left; font-variant-numeric: normal; }
+  tbody tr:last-child td { border-bottom: none; }
+  tr.total td { font-weight: 600; border-top: 2px solid var(--grid); border-bottom: none; }
+  .unit-note { font-size: 11px; color: var(--muted); margin: 8px 0 0; }
+
+  footer { font-size: 11px; color: var(--muted); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <p class="eyebrow">LKAI Terbit &middot; BPO OPK 2</p>
+      <h1>Realisasi Pembayaran vs Target AKI 2026</h1>
+      <p class="stamp" id="stamp" hidden></p>
+    </div>
+    <button id="btn-refresh" type="button" hidden>Muat ulang</button>
+  </header>
+
+  <div class="card" id="status">
+    <div class="spin"></div>
+    <div class="msg">Mengambil data terbaru dari Google Sheets&hellip;</div>
+  </div>
+
+  <div id="content" hidden>
+    <div class="wrap" style="padding:0">
+      <div class="card hero">
+        <div class="big" id="hero-pct"></div>
+        <div class="ctx">capaian total realisasi<br><b id="hero-real"></b> dari target <b id="hero-target"></b></div>
+      </div>
+
+      <div class="card">
+        <h2>Capaian per BPO Kinerja</h2>
+        <p class="sub">Realisasi s.d n terhadap Target AKI 2026</p>
+        <div class="legend">
+          <span><i class="key fill"></i>Realisasi s.d n</span>
+          <span><i class="key track"></i>Target AKI 2026</span>
+        </div>
+        <div id="chart"></div>
+      </div>
+
+      <div class="card">
+        <h2>Tabel Rekap</h2>
+        <p class="sub">Nilai dalam Miliar Rupiah</p>
+        <div class="tbl-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>BPO Kinerja</th>
+                <th>Target AKI 2026</th>
+                <th>Realisasi s.d n</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <p class="unit-note">1 Miliar = Rp 1.000.000.000. Persentase = Realisasi s.d n &divide; Target AKI 2026.</p>
+      </div>
+
+      <footer>
+        Sumber: Google Sheet &ldquo;LKAI Terbit&rdquo; (live), filter kolom BPO = OPK 2, dikelompokkan per kolom KIN.
+        Target = kolom W (Total AKI), Realisasi = kolom BO (Total Realisasi s.d n).
+      </footer>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SHEET_CSV =
+    "https://docs.google.com/spreadsheets/d/1cZzH3M6-VN1l3iKxuRtL-PHlKbYdCOiFNqGCPgBYP2w/export?format=csv&gid=1855677707";
+  var HEADER_ROWS = 7;      // data mulai baris ke-8
+  var COL_BPO = 0, COL_KIN = 1, COL_AKI = 22, COL_REAL = 66;
+  var FILTER_BPO = "OPK 2";
+
+  var elStatus = document.getElementById("status");
+  var elMsg = elStatus.querySelector(".msg");
+  var elSpin = elStatus.querySelector(".spin");
+  var elContent = document.getElementById("content");
+  var elStamp = document.getElementById("stamp");
+  var btnRefresh = document.getElementById("btn-refresh");
+
+  // ---- Parser CSV (menangani kutip, koma & baris-baru di dalam field) ----
+  function parseCsv(text) {
+    var rows = [], row = [], field = "", inQuotes = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else { inQuotes = false; }
+        } else { field += ch; }
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ",") {
+        row.push(field); field = "";
+      } else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && text[i + 1] === "\n") i++;
+        row.push(field); field = "";
+        rows.push(row); row = [];
+      } else { field += ch; }
+    }
+    if (field !== "" || row.length) { row.push(field); rows.push(row); }
+    return rows;
+  }
+
+  // ---- Angka format Indonesia: titik ribuan, koma desimal; kosong/#N/A -> 0 ----
+  function parseIdNumber(s) {
+    if (!s) return 0;
+    var t = s.trim().replace(/\./g, "").replace(",", ".");
+    var d = parseFloat(t);
+    return isFinite(d) ? d : 0;
+  }
+
+  function aggregate(rows) {
+    var groups = {};
+    for (var i = HEADER_ROWS; i < rows.length; i++) {
+      var r = rows[i];
+      if (!r || r.length <= COL_REAL) continue;
+      if ((r[COL_BPO] || "").trim() !== FILTER_BPO) continue;
+      var kin = (r[COL_KIN] || "").trim() || "(tanpa KIN)";
+      if (!groups[kin]) groups[kin] = { name: kin, target: 0, real: 0 };
+      groups[kin].target += parseIdNumber(r[COL_AKI]);
+      groups[kin].real += parseIdNumber(r[COL_REAL]);
+    }
+    var list = Object.keys(groups).map(function (k) {
+      var g = groups[k];
+      g.pct = g.target !== 0 ? 100 * g.real / g.target : 0;
+      return g;
+    });
+    if (!list.length) throw new Error("Tidak ada baris dengan BPO = " + FILTER_BPO);
+    var tTarget = 0, tReal = 0;
+    list.forEach(function (g) { tTarget += g.target; tReal += g.real; });
+    return {
+      rows: list.sort(function (a, b) { return b.pct - a.pct; }),
+      total: { target: tTarget, real: tReal, pct: tTarget !== 0 ? 100 * tReal / tTarget : 0 }
+    };
+  }
+
+  // ---- Format tampilan ----
+  function fmtM(v) {
+    return (v / 1e9).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtPct(p) {
+    return p.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%";
+  }
+  function fmtFull(v) { return "Rp " + Math.round(v).toLocaleString("id-ID"); }
+
+  function render(data) {
+    document.getElementById("hero-pct").textContent = fmtPct(data.total.pct);
+    document.getElementById("hero-real").textContent = fmtM(data.total.real) + " M";
+    document.getElementById("hero-target").textContent = fmtM(data.total.target) + " M";
+
+    var chart = document.getElementById("chart");
+    chart.textContent = "";
+    data.rows.forEach(function (r) {
+      var w = Math.max(0, Math.min(100, r.pct));
+      var row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML =
+        '<div class="top"><span class="name"></span><span class="pct"></span></div>' +
+        '<div class="meter"><div class="bar"></div></div>' +
+        '<div class="vals"></div>';
+      row.querySelector(".name").textContent = r.name;
+      row.querySelector(".pct").textContent = fmtPct(r.pct);
+      row.querySelector(".bar").style.width = w + "%";
+      row.querySelector(".vals").textContent = fmtM(r.real) + " M dari " + fmtM(r.target) + " M";
+      row.title = r.name + "\nTarget AKI 2026: " + fmtFull(r.target) + "\nRealisasi s.d n: " + fmtFull(r.real);
+      chart.appendChild(row);
+    });
+
+    var tbody = document.getElementById("tbody");
+    tbody.textContent = "";
+    data.rows
+      .concat([{ name: "TOTAL", target: data.total.target, real: data.total.real, pct: data.total.pct, isTotal: true }])
+      .forEach(function (r) {
+        var tr = document.createElement("tr");
+        if (r.isTotal) tr.className = "total";
+        [r.name, fmtM(r.target), fmtM(r.real), fmtPct(r.pct)].forEach(function (c) {
+          var td = document.createElement("td");
+          td.textContent = c;
+          tr.appendChild(td);
+        });
+        tr.title = "Target: " + fmtFull(r.target) + "\nRealisasi: " + fmtFull(r.real);
+        tbody.appendChild(tr);
+      });
+
+    var now = new Date();
+    elStamp.textContent = "Data per " + now.toLocaleString("id-ID", {
+      day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+      timeZone: "Asia/Makassar"
+    }).replace(/\./g, ":") + " WITA";
+    elStamp.hidden = false;
+  }
+
+  function setState(state, message) {
+    elStatus.hidden = state === "ok";
+    elContent.hidden = state !== "ok";
+    btnRefresh.hidden = state === "loading";
+    btnRefresh.disabled = state === "loading";
+    elStatus.classList.toggle("error", state === "error");
+    elSpin.hidden = state !== "loading";
+    var old = document.getElementById("btn-retry");
+    if (old) old.remove();
+    if (state === "loading") {
+      elMsg.textContent = "Mengambil data terbaru dari Google Sheets…";
+    } else if (state === "error") {
+      elMsg.textContent = message;
+      var btn = document.createElement("button");
+      btn.id = "btn-retry";
+      btn.type = "button";
+      btn.textContent = "Coba lagi";
+      btn.addEventListener("click", load);
+      elStatus.appendChild(btn);
+    }
+  }
+
+  function load() {
+    setState("loading");
+    fetch(SHEET_CSV + "&t=" + Date.now(), { cache: "no-store" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.text();
+      })
+      .then(function (text) {
+        render(aggregate(parseCsv(text)));
+        setState("ok");
+      })
+      .catch(function (err) {
+        setState("error",
+          "Gagal mengambil data (" + err.message + "). Periksa koneksi internet lalu coba lagi.");
+      });
+  }
+
+  btnRefresh.addEventListener("click", load);
+  load();
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(function () { /* offline shell opsional */ });
+  }
+})();
+</script>
+</body>
+</html>
