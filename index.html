@@ -20,6 +20,7 @@
     --fill: #2a78d6;
     --track: #cde2fb;
     --err: #d03b3b;
+    --hero-overlay: rgba(252, 252, 251, 0.72);
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -33,6 +34,7 @@
       --fill: #3987e5;
       --track: #104281;
       --err: #e66767;
+      --hero-overlay: rgba(26, 26, 25, 0.72);
     }
   }
   html { background: var(--page); }
@@ -89,9 +91,34 @@
   }
 
   /* Hero */
-  .hero { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-  .hero .big { font-size: 48px; font-weight: 600; line-height: 1; }
-  .hero .ctx { font-size: 13px; color: var(--ink-2); }
+  .hero {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    display: flex; gap: 20px; flex-wrap: wrap;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0;
+    background-image: url("background-PLN.jpg");
+    background-size: cover; background-position: center;
+    z-index: -2;
+  }
+  .hero::after {
+    content: ""; position: absolute; inset: 0;
+    background: var(--hero-overlay);
+    z-index: -1;
+  }
+  .hero .logo {
+    position: absolute; top: 12px; right: 12px;
+    height: 30px; width: auto; /* rasio asli 187:256 dipertahankan */
+  }
+  .hero .stat { flex: 1 1 130px; min-width: 130px; }
+  .hero .stat .label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase;
+    color: var(--ink-2); margin: 0 0 2px;
+  }
+  .hero .big { font-size: 32px; font-weight: 600; line-height: 1.1; }
+  .hero .ctx { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
   .hero .ctx b { color: var(--ink); font-weight: 600; }
 
   /* Chart */
@@ -138,7 +165,7 @@
 <div class="wrap">
   <header>
     <div>
-      <p class="eyebrow">LKAI Terbit &middot; BPO OPK 2</p>
+      <p class="eyebrow">Monitoring AKI Non Rutin</p>
       <h1>Realisasi Pembayaran vs Target AKI 2026</h1>
       <p class="stamp" id="stamp" hidden></p>
     </div>
@@ -153,8 +180,17 @@
   <div id="content" hidden>
     <div class="wrap" style="padding:0">
       <div class="card hero">
-        <div class="big" id="hero-pct"></div>
-        <div class="ctx">capaian total realisasi<br><b id="hero-real"></b> dari target <b id="hero-target"></b></div>
+        <img class="logo" src="logo-PLN.png" alt="PLN">
+        <div class="stat">
+          <p class="label">Total OPK 1</p>
+          <div class="big" id="hero-opk1-pct"></div>
+          <div class="ctx"><b id="hero-opk1-real"></b> dari <b id="hero-opk1-target"></b></div>
+        </div>
+        <div class="stat">
+          <p class="label">Total OPK 2</p>
+          <div class="big" id="hero-opk2-pct"></div>
+          <div class="ctx"><b id="hero-opk2-real"></b> dari <b id="hero-opk2-target"></b></div>
+        </div>
       </div>
 
       <div class="card">
@@ -187,7 +223,7 @@
       </div>
 
       <footer>
-        Dashboard Live by Muhamad Zainudin, Sumber: Google Sheet &ldquo;LKAI Terbit UIP SUL&rdquo;
+        Dashboard Live by Muhamad Zainudin, Sumber: Google Sheet Bidang Keuangan &ldquo;Monitoring dan Evaluasi Anggaran Investasi USLW 2026&rdquo;
       </footer>
     </div>
   </div>
@@ -201,7 +237,7 @@
     "https://docs.google.com/spreadsheets/d/1cZzH3M6-VN1l3iKxuRtL-PHlKbYdCOiFNqGCPgBYP2w/export?format=csv&gid=1855677707";
   var HEADER_ROWS = 7;      // data mulai baris ke-8
   var COL_BPO = 0, COL_KIN = 1, COL_AKI = 22, COL_REAL = 66;
-  var FILTER_BPO = "OPK 2";
+  var FILTER_BPO = ["OPK 1", "OPK 2"];
 
   var elStatus = document.getElementById("status");
   var elMsg = elStatus.querySelector(".msg");
@@ -244,32 +280,43 @@
 
   function aggregate(rows) {
     var groups = {};
+    // Total per BPO asli (lintas KIN) - independen dari grup KIN gabungan di bawah
+    var opk1 = { target: 0, real: 0 };
+    var opk2 = { target: 0, real: 0 };
     for (var i = HEADER_ROWS; i < rows.length; i++) {
       var r = rows[i];
       if (!r || r.length <= COL_REAL) continue;
-      if ((r[COL_BPO] || "").trim() !== FILTER_BPO) continue;
+      var bpo = (r[COL_BPO] || "").trim();
+      if (FILTER_BPO.indexOf(bpo) === -1) continue;
+      var target = parseIdNumber(r[COL_AKI]);
+      var real = parseIdNumber(r[COL_REAL]);
+
       var kin = (r[COL_KIN] || "").trim() || "(tanpa KIN)";
       if (!groups[kin]) groups[kin] = { name: kin, target: 0, real: 0 };
-      groups[kin].target += parseIdNumber(r[COL_AKI]);
-      groups[kin].real += parseIdNumber(r[COL_REAL]);
+      groups[kin].target += target;
+      groups[kin].real += real;
+
+      if (bpo === "OPK 1") { opk1.target += target; opk1.real += real; }
+      else if (bpo === "OPK 2") { opk2.target += target; opk2.real += real; }
     }
     var list = Object.keys(groups).map(function (k) {
       var g = groups[k];
       g.pct = g.target !== 0 ? 100 * g.real / g.target : 0;
       return g;
     });
-    if (!list.length) throw new Error("Tidak ada baris dengan BPO = " + FILTER_BPO);
-    var tTarget = 0, tReal = 0;
-    list.forEach(function (g) { tTarget += g.target; tReal += g.real; });
-    // OPK 2 selalu paling atas, sisanya urut capaian tertinggi
+    if (!list.length) throw new Error("Tidak ada baris dengan BPO = OPK 1/OPK 2");
+    // OPK 1 paling atas, lalu OPK 2, sisanya urut capaian tertinggi
     list.sort(function (a, b) {
+      if (a.name === "OPK 1") return -1;
+      if (b.name === "OPK 1") return 1;
       if (a.name === "OPK 2") return -1;
       if (b.name === "OPK 2") return 1;
       return b.pct - a.pct;
     });
     return {
       rows: list,
-      total: { target: tTarget, real: tReal, pct: tTarget !== 0 ? 100 * tReal / tTarget : 0 }
+      totalOpk1: { target: opk1.target, real: opk1.real, pct: opk1.target !== 0 ? 100 * opk1.real / opk1.target : 0 },
+      totalOpk2: { target: opk2.target, real: opk2.real, pct: opk2.target !== 0 ? 100 * opk2.real / opk2.target : 0 }
     };
   }
 
@@ -283,9 +330,12 @@
   function fmtFull(v) { return "Rp " + Math.round(v).toLocaleString("id-ID"); }
 
   function render(data) {
-    document.getElementById("hero-pct").textContent = fmtPct(data.total.pct);
-    document.getElementById("hero-real").textContent = fmtM(data.total.real) + " M";
-    document.getElementById("hero-target").textContent = fmtM(data.total.target) + " M";
+    document.getElementById("hero-opk1-pct").textContent = fmtPct(data.totalOpk1.pct);
+    document.getElementById("hero-opk1-real").textContent = fmtFull(data.totalOpk1.real);
+    document.getElementById("hero-opk1-target").textContent = fmtFull(data.totalOpk1.target);
+    document.getElementById("hero-opk2-pct").textContent = fmtPct(data.totalOpk2.pct);
+    document.getElementById("hero-opk2-real").textContent = fmtFull(data.totalOpk2.real);
+    document.getElementById("hero-opk2-target").textContent = fmtFull(data.totalOpk2.target);
 
     var chart = document.getElementById("chart");
     chart.textContent = "";
@@ -308,7 +358,10 @@
     var tbody = document.getElementById("tbody");
     tbody.textContent = "";
     data.rows
-      .concat([{ name: "TOTAL", target: data.total.target, real: data.total.real, pct: data.total.pct, isTotal: true }])
+      .concat([
+        { name: "Total OPK 1", target: data.totalOpk1.target, real: data.totalOpk1.real, pct: data.totalOpk1.pct, isTotal: true },
+        { name: "Total OPK 2", target: data.totalOpk2.target, real: data.totalOpk2.real, pct: data.totalOpk2.pct, isTotal: true }
+      ])
       .forEach(function (r) {
         var tr = document.createElement("tr");
         if (r.isTotal) tr.className = "total";
