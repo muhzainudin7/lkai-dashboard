@@ -237,7 +237,7 @@
   var SHEET_CSV =
     "https://docs.google.com/spreadsheets/d/1cZzH3M6-VN1l3iKxuRtL-PHlKbYdCOiFNqGCPgBYP2w/export?format=csv&gid=1855677707";
   var HEADER_ROWS = 7;      // data mulai baris ke-8
-  var COL_BPO = 0, COL_KIN = 1, COL_AKI = 22, COL_REAL = 66;
+  var ROW_H5 = 4, ROW_H6 = 5; // baris header (0-based) tempat teks kolom dicocokkan
   var FILTER_BPO = ["OPK 1", "OPK 2"];
 
   var elStatus = document.getElementById("status");
@@ -279,20 +279,47 @@
     return isFinite(d) ? d : 0;
   }
 
-  function aggregate(rows) {
+  // ---- Cari kolom berdasar teks header, bukan indeks tetap ----
+  // Sheet bisa berubah urutan kolomnya kapan saja; mencocokkan teks header
+  // (bukan posisi) membuat pencarian tetap benar walau kolom digeser/disisipi.
+  function findColumn(headerRow, text) {
+    for (var i = 0; i < headerRow.length; i++) {
+      if ((headerRow[i] || "").trim() === text) return i;
+    }
+    return -1;
+  }
+
+  function resolveColumns(rows) {
+    var h5 = rows[ROW_H5] || [];
+    var h6 = rows[ROW_H6] || [];
+    var cols = {
+      bpo: findColumn(h5, "BPO"),
+      kin: findColumn(h6, "KIN"),
+      aki: findColumn(h6, "Total AKI"),
+      real: findColumn(h5, "Total Realisasi s.d n")
+    };
+    var missing = Object.keys(cols).filter(function (k) { return cols[k] === -1; });
+    if (missing.length) {
+      throw new Error("Struktur header sheet berubah - kolom tidak ditemukan: " + missing.join(", "));
+    }
+    return cols;
+  }
+
+  function aggregate(rows, cols) {
     var groups = {};
     // Total per BPO asli (lintas KIN) - independen dari grup KIN gabungan di bawah
     var opk1 = { target: 0, real: 0 };
     var opk2 = { target: 0, real: 0 };
+    var maxCol = Math.max(cols.bpo, cols.kin, cols.aki, cols.real);
     for (var i = HEADER_ROWS; i < rows.length; i++) {
       var r = rows[i];
-      if (!r || r.length <= COL_REAL) continue;
-      var bpo = (r[COL_BPO] || "").trim();
+      if (!r || r.length <= maxCol) continue;
+      var bpo = (r[cols.bpo] || "").trim();
       if (FILTER_BPO.indexOf(bpo) === -1) continue;
-      var target = parseIdNumber(r[COL_AKI]);
-      var real = parseIdNumber(r[COL_REAL]);
+      var target = parseIdNumber(r[cols.aki]);
+      var real = parseIdNumber(r[cols.real]);
 
-      var kin = (r[COL_KIN] || "").trim() || "(tanpa KIN)";
+      var kin = (r[cols.kin] || "").trim() || "(tanpa KIN)";
       if (!groups[kin]) groups[kin] = { name: kin, target: 0, real: 0 };
       groups[kin].target += target;
       groups[kin].real += real;
@@ -413,7 +440,9 @@
         return res.text();
       })
       .then(function (text) {
-        render(aggregate(parseCsv(text)));
+        var rows = parseCsv(text);
+        var cols = resolveColumns(rows);
+        render(aggregate(rows, cols));
         setState("ok");
       })
       .catch(function (err) {
