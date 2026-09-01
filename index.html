@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#2a78d6">
-<title>LKAI OPK 2 — Realisasi vs Target AKI 2026</title>
+<title>Dashboard AKI &amp; SLA VIP — BPO OPK</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -47,6 +47,7 @@
     line-height: 1.45;
   }
   .wrap { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  .view { display: flex; flex-direction: column; gap: 14px; }
 
   header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
   header .eyebrow {
@@ -65,6 +66,21 @@
   #btn-refresh:focus-visible { outline: 2px solid var(--fill); outline-offset: 2px; }
   #btn-refresh:disabled { color: var(--muted); }
 
+  /* Tab: satu app, dua tampilan */
+  .tabs {
+    display: flex; gap: 4px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 4px;
+  }
+  .tabs button {
+    flex: 1; cursor: pointer;
+    font: 600 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ink-2); background: none; border: none;
+    border-radius: 7px; padding: 10px 8px;
+  }
+  .tabs button[aria-selected="true"] { background: var(--fill); color: #fff; }
+  .tabs button:focus-visible { outline: 2px solid var(--fill); outline-offset: 2px; }
+
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -73,7 +89,7 @@
   }
 
   /* Status: loading & error */
-  #status { text-align: center; padding: 28px 16px; }
+  .status { text-align: center; padding: 28px 16px; }
   .spin {
     width: 22px; height: 22px; margin: 0 auto 10px;
     border: 3px solid var(--track); border-top-color: var(--fill);
@@ -81,9 +97,9 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.4s; } }
-  #status .msg { font-size: 13px; color: var(--ink-2); }
-  #status.error .msg { color: var(--err); }
-  #btn-retry {
+  .status .msg { font-size: 13px; color: var(--ink-2); }
+  .status.error .msg { color: var(--err); }
+  .btn-retry {
     margin-top: 12px;
     font: 600 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
     color: #fff; background: var(--fill);
@@ -129,6 +145,7 @@
   .key { width: 12px; height: 12px; border-radius: 3px; flex: none; }
   .key.fill { background: var(--fill); }
   .key.track { background: var(--track); }
+  .key.late { background: var(--err); }
 
   .row { margin: 0 0 12px; }
   .row:last-child { margin-bottom: 0; }
@@ -137,6 +154,7 @@
   .row .pct { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .meter { position: relative; height: 16px; background: var(--track); border-radius: 4px; overflow: hidden; }
   .meter .bar { position: absolute; inset: 0 auto 0 0; background: var(--fill); border-radius: 0 4px 4px 0; }
+  .meter .bar.late { background: var(--err); }
   .row .vals { font-size: 11px; color: var(--muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
 
   /* Table */
@@ -155,6 +173,7 @@
   td:first-child { text-align: left; font-variant-numeric: normal; }
   tbody tr:last-child td { border-bottom: none; }
   tr.total td { font-weight: 600; border-top: 2px solid var(--grid); border-bottom: none; }
+  td.miss { color: var(--err); }
   .unit-note { font-size: 11px; color: var(--muted); margin: 8px 0 0; }
 
   footer { font-size: 11px; color: var(--muted); }
@@ -165,20 +184,26 @@
 <div class="wrap">
   <header>
     <div>
-      <p class="eyebrow">Monitoring AKI Non Rutin - BPO OPK</p>
-      <h1>Realisasi Pembayaran vs Target AKI 2026</h1>
+      <p class="eyebrow" id="eyebrow">Monitoring AKI Non Rutin - BPO OPK</p>
+      <h1 id="title">Realisasi Pembayaran vs Target AKI 2026</h1>
       <p class="stamp" id="stamp" hidden></p>
     </div>
     <button id="btn-refresh" type="button" hidden>Muat ulang</button>
   </header>
 
-  <div class="card" id="status">
-    <div class="spin"></div>
-    <div class="msg">Mengambil data terbaru dari Google Sheets&hellip;</div>
+  <div class="tabs" role="tablist">
+    <button id="tab-aki" type="button" role="tab" aria-selected="true" aria-controls="view-aki">AKI 2026</button>
+    <button id="tab-sla" type="button" role="tab" aria-selected="false" aria-controls="view-sla">SLA VIP</button>
   </div>
 
-  <div id="content" hidden>
-    <div class="wrap" style="padding:0">
+  <!-- ================= Tab 1: Realisasi vs Target AKI ================= -->
+  <section class="view" id="view-aki" role="tabpanel" aria-labelledby="tab-aki">
+    <div class="card status" id="status">
+      <div class="spin"></div>
+      <div class="msg">Mengambil data terbaru dari Google Sheets&hellip;</div>
+    </div>
+
+    <div class="view" id="content" hidden>
       <div class="card hero">
         <img class="logo" src="logo-PLN.png" alt="PLN">
         <div class="stat">
@@ -227,12 +252,85 @@
         Sumber: Google Sheet Bidang Keuangan &ldquo;Monitoring dan Evaluasi Anggaran Investasi USLW 2026&rdquo;
       </footer>
     </div>
-  </div>
+  </section>
+
+  <!-- ================= Tab 2: SLA Proses VIP ================= -->
+  <section class="view" id="view-sla" role="tabpanel" aria-labelledby="tab-sla" hidden>
+    <div class="card status" id="sla-status">
+      <div class="spin"></div>
+      <div class="msg">Mengambil data terbaru dari Google Sheets&hellip;</div>
+    </div>
+
+    <div class="view" id="sla-content" hidden>
+      <div class="card hero">
+        <img class="logo" src="logo-PLN.png" alt="PLN">
+        <div class="stat">
+          <p class="label">Tepat SLA</p>
+          <div class="big" id="sla-hero-pct"></div>
+          <div class="ctx"><b id="sla-hero-ok"></b> dari <b id="sla-hero-n"></b> dokumen</div>
+        </div>
+        <div class="stat">
+          <p class="label">Rata-rata Proses</p>
+          <div class="big" id="sla-hero-avg"></div>
+          <div class="ctx">Target SLA <b id="sla-hero-target"></b></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Pusat vs Unit</h2>
+        <p class="sub">Porsi dokumen yang terbit dalam SLA</p>
+        <div class="legend">
+          <span><i class="key fill"></i>Tepat SLA</span>
+          <span><i class="key track"></i>Melewati SLA</span>
+        </div>
+        <div id="sla-source"></div>
+      </div>
+
+      <div class="card">
+        <h2>Distribusi Lama Proses</h2>
+        <p class="sub">VIP submission &rarr; SPTJP terbit, dalam hari kerja</p>
+        <div class="legend">
+          <span><i class="key fill"></i>Tepat SLA</span>
+          <span><i class="key late"></i>Melewati SLA</span>
+        </div>
+        <div id="sla-bucket"></div>
+      </div>
+
+      <div class="card">
+        <h2>Rekap per Bulan</h2>
+        <p class="sub">Dikelompokkan menurut bulan VIP submission</p>
+        <div class="tbl-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Bulan</th>
+                <th>Dok</th>
+                <th>Rata&sup2;</th>
+                <th>Tepat</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody id="sla-tbody"></tbody>
+          </table>
+        </div>
+        <p class="unit-note" id="sla-note"></p>
+      </div>
+
+      <footer>
+        Dashboard Live by Sub-Bidang Administrasi Teknik.<br>
+        Sumber: Google Sheet Bidang Keuangan &ldquo;Rekapitulasi Tagihan Pusat &amp; Unit&rdquo;
+      </footer>
+    </div>
+  </section>
 </div>
 
 <script>
 (function () {
   "use strict";
+
+  /* =====================================================================
+     Sumber data
+     ===================================================================== */
 
   var SHEET_CSV =
     "https://docs.google.com/spreadsheets/d/1cZzH3M6-VN1l3iKxuRtL-PHlKbYdCOiFNqGCPgBYP2w/export?format=csv&gid=1855677707";
@@ -240,12 +338,107 @@
   var ROW_H5 = 4, ROW_H6 = 5; // baris header (0-based) tempat teks kolom dicocokkan
   var FILTER_BPO = ["OPK 1", "OPK 2"];
 
-  var elStatus = document.getElementById("status");
-  var elMsg = elStatus.querySelector(".msg");
-  var elSpin = elStatus.querySelector(".spin");
-  var elContent = document.getElementById("content");
-  var elStamp = document.getElementById("stamp");
-  var btnRefresh = document.getElementById("btn-refresh");
+  // Sheet "Rekapitulasi Tagihan": header di baris 17, data mulai baris 18.
+  // Range diambil MULAI baris 17 supaya baris pertama bisa dipakai sebagai
+  // pemeriksa struktur - kalau kolom digeser, kita gagal keras, bukan diam-diam
+  // menghitung nol. Ambil per-range (bukan sheet penuh): ±90 KB, bukan 2,8 MB.
+  var SLA_SHEET_ID = "1YGe8t37hEcNnPdr8ChitJqfHhX0DG-Gd_p8Mc8lJgxc";
+  var SLA_SOURCES = [
+    { name: "Unit",  gid: "25189397",  range: "BS17:BW20000" },  // BS=VIP submission, BV=SPTJP terbit
+    { name: "Pusat", gid: "611486759", range: "BC17:BG20000" }   // BC=VIP submission, BF=SPTJP terbit
+  ];
+  var SLA_COL_START = 0, SLA_COL_END = 3;   // offset relatif sama di kedua sheet
+  var SLA_HDR_START = "VIP submission", SLA_HDR_END = "SPTJP terbit";
+
+  var PERIODE = 2026;   // hanya dokumen dengan VIP submission di tahun ini
+  var SLA_HARI = 3;     // SLA: maksimal 3 hari kerja
+
+  /* ---------------------------------------------------------------------
+     Hari libur nasional + cuti bersama (SKB 3 Menteri).
+     SATU-SATUNYA tempat yang perlu diperbarui tiap awal tahun.
+     Hari Sabtu & Minggu sudah otomatis dikecualikan, tidak perlu didaftar.
+     --------------------------------------------------------------------- */
+  var HOLIDAYS = [
+    // ---- 2024 ----
+    "2024-01-01", // Tahun Baru 2024
+    "2024-02-08", // Isra Mikraj 1445 H
+    "2024-02-09", // Cuti bersama Imlek
+    "2024-02-10", // Tahun Baru Imlek 2575
+    "2024-02-14", // Pemungutan suara Pemilu
+    "2024-03-11", // Hari Suci Nyepi 1946
+    "2024-03-12", // Cuti bersama Nyepi
+    "2024-03-29", // Wafat Isa Almasih
+    "2024-04-08", "2024-04-09", // Cuti bersama Idul Fitri
+    "2024-04-10", "2024-04-11", // Idul Fitri 1445 H
+    "2024-04-12", "2024-04-15", // Cuti bersama Idul Fitri
+    "2024-05-01", // Hari Buruh
+    "2024-05-09", // Kenaikan Isa Almasih
+    "2024-05-10", // Cuti bersama Kenaikan Isa Almasih
+    "2024-05-23", // Waisak 2568
+    "2024-05-24", // Cuti bersama Waisak
+    "2024-06-01", // Hari Lahir Pancasila
+    "2024-06-17", // Idul Adha 1445 H
+    "2024-06-18", // Cuti bersama Idul Adha
+    "2024-07-07", // Tahun Baru Islam 1446 H
+    "2024-08-17", // HUT RI
+    "2024-09-16", // Maulid Nabi Muhammad SAW
+    "2024-11-27", // Pemungutan suara Pilkada serentak
+    "2024-12-25", // Hari Raya Natal
+    "2024-12-26", // Cuti bersama Natal
+
+    // ---- 2025 ----
+    "2025-01-01", // Tahun Baru 2025
+    "2025-01-27", // Isra Mikraj 1446 H
+    "2025-01-28", // Cuti bersama Imlek
+    "2025-01-29", // Tahun Baru Imlek 2576
+    "2025-03-28", // Cuti bersama Nyepi
+    "2025-03-29", // Hari Suci Nyepi 1947
+    "2025-03-31", "2025-04-01", // Idul Fitri 1446 H
+    "2025-04-02", "2025-04-03", "2025-04-04", "2025-04-07", // Cuti bersama Idul Fitri
+    "2025-04-18", // Wafat Isa Almasih
+    "2025-05-01", // Hari Buruh
+    "2025-05-12", // Waisak 2569
+    "2025-05-13", // Cuti bersama Waisak
+    "2025-05-29", // Kenaikan Isa Almasih
+    "2025-05-30", // Cuti bersama Kenaikan Isa Almasih
+    "2025-06-01", // Hari Lahir Pancasila
+    "2025-06-06", // Idul Adha 1446 H
+    "2025-06-09", // Cuti bersama Idul Adha
+    "2025-06-27", // Tahun Baru Islam 1447 H
+    "2025-08-17", // HUT RI
+    "2025-09-05", // Maulid Nabi Muhammad SAW
+    "2025-12-25", // Hari Raya Natal
+    "2025-12-26", // Cuti bersama Natal
+
+    // ---- 2026 ----  <<< PERIKSA ULANG terhadap SKB 3 Menteri resmi
+    "2026-01-01", // Tahun Baru 2026
+    "2026-01-02", // Cuti bersama Tahun Baru
+    "2026-01-16", // Isra Mikraj 1447 H
+    "2026-02-17", // Tahun Baru Imlek 2577
+    "2026-02-18", // Cuti bersama Imlek
+    "2026-03-18", // Cuti bersama Idul Fitri
+    "2026-03-19", // Hari Suci Nyepi 1948
+    "2026-03-20", // Idul Fitri 1447 H
+    "2026-03-23", "2026-03-24", "2026-03-25", // Cuti bersama Idul Fitri
+    "2026-04-03", // Wafat Isa Almasih
+    "2026-05-01", // Hari Buruh
+    "2026-05-14", // Kenaikan Isa Almasih
+    "2026-05-15", // Cuti bersama Kenaikan Isa Almasih
+    "2026-05-27", // Idul Adha 1447 H
+    "2026-06-01", // Hari Lahir Pancasila
+    "2026-06-16", // Tahun Baru Islam 1448 H
+    "2026-08-17", // HUT RI
+    "2026-08-25", // Maulid Nabi Muhammad SAW
+    "2026-12-24", // Cuti bersama Natal
+    "2026-12-25"  // Hari Raya Natal
+  ];
+
+  var HOLIDAY_SET = {};
+  HOLIDAYS.forEach(function (d) { HOLIDAY_SET[d] = true; });
+
+  /* =====================================================================
+     Helper bersama
+     ===================================================================== */
 
   // ---- Parser CSV (menangani kutip, koma & baris-baru di dalam field) ----
   function parseCsv(text) {
@@ -278,6 +471,110 @@
     var d = parseFloat(t);
     return isFinite(d) ? d : 0;
   }
+
+  function fmtPct(p) {
+    return p.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%";
+  }
+  function fmtNum(v, dec) {
+    return v.toLocaleString("id-ID", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  }
+
+  function fetchCsv(url) {
+    return fetch(url + (url.indexOf("?") === -1 ? "?" : "&") + "t=" + Date.now(), { cache: "no-store" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.text();
+      })
+      .then(parseCsv);
+  }
+
+  /* ---- Tanggal sheet: "15 Mar 24" / "24 Aug 26" ---- */
+  var MONTHS = {
+    jan: 0, feb: 1, peb: 1, mar: 2, apr: 3, may: 4, mei: 4, jun: 5,
+    jul: 6, aug: 7, agu: 7, agt: 7, sep: 8, oct: 9, okt: 9,
+    nov: 10, nop: 10, dec: 11, des: 11
+  };
+  function parseSheetDate(s) {
+    if (!s) return null;
+    var m = /^(\d{1,2})\s+([A-Za-z]+)\s+(\d{2,4})$/.exec(s.trim());
+    if (!m) return null;
+    var mo = MONTHS[m[2].slice(0, 3).toLowerCase()];
+    if (mo === undefined) return null;
+    var y = parseInt(m[3], 10);
+    if (y < 100) y += 2000;
+    var day = parseInt(m[1], 10);
+    var d = new Date(y, mo, day);
+    // Tolak tanggal yang "melimpah" (mis. 31 Feb) supaya tidak diam-diam bergeser.
+    return (d.getMonth() === mo && d.getDate() === day) ? d : null;
+  }
+
+  function ymd(d) {
+    var m = d.getMonth() + 1, day = d.getDate();
+    return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (day < 10 ? "0" : "") + day;
+  }
+
+  // Hitung hari kerja di rentang (a, b] - tanggal awal tidak dihitung, tanggal
+  // akhir dihitung. Sabtu, Minggu, dan hari libur pada HOLIDAYS dilewati.
+  // Submit & terbit di hari yang sama => 0 hari.
+  function workingDaysBetween(a, b) {
+    var n = 0, c = new Date(a.getFullYear(), a.getMonth(), a.getDate() + 1);
+    var end = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+    while (c <= end) {
+      var w = c.getDay();
+      if (w !== 0 && w !== 6 && !HOLIDAY_SET[ymd(c)]) n++;
+      c.setDate(c.getDate() + 1);
+    }
+    return n;
+  }
+
+  var MONTH_ID = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+
+  /* ---- Status view: spinner / error / konten ---- */
+  function makeSetState(key, statusEl, contentEl, loadFn) {
+    var msgEl = statusEl.querySelector(".msg");
+    var spinEl = statusEl.querySelector(".spin");
+    return function setState(state, message) {
+      statusEl.hidden = state === "ok";
+      contentEl.hidden = state !== "ok";
+      statusEl.classList.toggle("error", state === "error");
+      spinEl.hidden = state !== "loading";
+      var old = statusEl.querySelector(".btn-retry");
+      if (old) old.remove();
+      if (state === "loading") {
+        msgEl.textContent = "Mengambil data terbaru dari Google Sheets…";
+      } else if (state === "error") {
+        msgEl.textContent = message;
+        var btn = document.createElement("button");
+        btn.className = "btn-retry";
+        btn.type = "button";
+        btn.textContent = "Coba lagi";
+        btn.addEventListener("click", loadFn);
+        statusEl.appendChild(btn);
+      }
+      // Fetch bisa selesai saat user sudah pindah tab - simpan state di view
+      // yang bersangkutan, dan hanya sentuh tombol kalau tab itu yang aktif.
+      views[key].state = state;
+      if (active === key) syncRefreshBtn();
+    };
+  }
+
+  var elStamp = document.getElementById("stamp");
+  var elEyebrow = document.getElementById("eyebrow");
+  var elTitle = document.getElementById("title");
+  var btnRefresh = document.getElementById("btn-refresh");
+
+  function stampNow() {
+    var now = new Date();
+    elStamp.textContent = "Data per " + now.toLocaleString("id-ID", {
+      day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+      timeZone: "Asia/Makassar"
+    }).replace(/\./g, ":") + " WITA";
+    elStamp.hidden = false;
+  }
+
+  /* =====================================================================
+     Tab 1 - Realisasi vs Target AKI
+     ===================================================================== */
 
   // ---- Cari kolom berdasar teks header, bukan indeks tetap ----
   // Sheet bisa berubah urutan kolomnya kapan saja; mencocokkan teks header
@@ -349,15 +646,10 @@
   }
 
   // ---- Format tampilan ----
-  function fmtM(v) {
-    return (v / 1e9).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-  function fmtPct(p) {
-    return p.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%";
-  }
+  function fmtM(v) { return fmtNum(v / 1e9, 2); }
   function fmtFull(v) { return "Rp " + Math.round(v).toLocaleString("id-ID"); }
 
-  function render(data) {
+  function renderAki(data) {
     document.getElementById("hero-opk1-pct").textContent = fmtPct(data.totalOpk1.pct);
     document.getElementById("hero-opk1-real").textContent = fmtFull(data.totalOpk1.real);
     document.getElementById("hero-opk1-target").textContent = fmtFull(data.totalOpk1.target);
@@ -369,16 +661,7 @@
     chart.textContent = "";
     data.rows.forEach(function (r) {
       var w = Math.max(0, Math.min(100, r.pct));
-      var row = document.createElement("div");
-      row.className = "row";
-      row.innerHTML =
-        '<div class="top"><span class="name"></span><span class="pct"></span></div>' +
-        '<div class="meter"><div class="bar"></div></div>' +
-        '<div class="vals"></div>';
-      row.querySelector(".name").textContent = r.name;
-      row.querySelector(".pct").textContent = fmtPct(r.pct);
-      row.querySelector(".bar").style.width = w + "%";
-      row.querySelector(".vals").textContent = fmtFull(r.real) + " dari " + fmtFull(r.target);
+      var row = meterRow(r.name, fmtPct(r.pct), w, false, fmtFull(r.real) + " dari " + fmtFull(r.target));
       row.title = r.name + "\nTarget AKI 2026: " + fmtFull(r.target) + "\nRealisasi s.d n: " + fmtFull(r.real);
       chart.appendChild(row);
     });
@@ -391,68 +674,269 @@
         { name: "Total OPK 2", target: data.totalOpk2.target, real: data.totalOpk2.real, pct: data.totalOpk2.pct, isTotal: true }
       ])
       .forEach(function (r) {
-        var tr = document.createElement("tr");
-        if (r.isTotal) tr.className = "total";
-        [r.name, fmtM(r.target), fmtM(r.real), fmtPct(r.pct)].forEach(function (c) {
-          var td = document.createElement("td");
-          td.textContent = c;
-          tr.appendChild(td);
-        });
+        var tr = addRow(tbody, [r.name, fmtM(r.target), fmtM(r.real), fmtPct(r.pct)], r.isTotal);
         tr.title = "Target: " + fmtFull(r.target) + "\nRealisasi: " + fmtFull(r.real);
-        tbody.appendChild(tr);
       });
 
-    var now = new Date();
-    elStamp.textContent = "Data per " + now.toLocaleString("id-ID", {
-      day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
-      timeZone: "Asia/Makassar"
-    }).replace(/\./g, ":") + " WITA";
-    elStamp.hidden = false;
+    stampNow();
   }
 
-  function setState(state, message) {
-    elStatus.hidden = state === "ok";
-    elContent.hidden = state !== "ok";
-    btnRefresh.hidden = state === "loading";
-    btnRefresh.disabled = state === "loading";
-    elStatus.classList.toggle("error", state === "error");
-    elSpin.hidden = state !== "loading";
-    var old = document.getElementById("btn-retry");
-    if (old) old.remove();
-    if (state === "loading") {
-      elMsg.textContent = "Mengambil data terbaru dari Google Sheets…";
-    } else if (state === "error") {
-      elMsg.textContent = message;
-      var btn = document.createElement("button");
-      btn.id = "btn-retry";
-      btn.type = "button";
-      btn.textContent = "Coba lagi";
-      btn.addEventListener("click", load);
-      elStatus.appendChild(btn);
-    }
-  }
-
-  function load() {
-    setState("loading");
-    fetch(SHEET_CSV + "&t=" + Date.now(), { cache: "no-store" })
-      .then(function (res) {
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        return res.text();
-      })
-      .then(function (text) {
-        var rows = parseCsv(text);
+  function loadAki() {
+    setStateAki("loading");
+    fetchCsv(SHEET_CSV)
+      .then(function (rows) {
         var cols = resolveColumns(rows);
-        render(aggregate(rows, cols));
-        setState("ok");
+        renderAki(aggregate(rows, cols));
+        setStateAki("ok");
       })
       .catch(function (err) {
-        setState("error",
+        setStateAki("error",
           "Gagal mengambil data (" + err.message + "). Periksa koneksi internet lalu coba lagi.");
       });
   }
 
-  btnRefresh.addEventListener("click", load);
-  load();
+  /* =====================================================================
+     Tab 2 - SLA Proses VIP
+     ===================================================================== */
+
+  var BUCKETS = [
+    { label: "0-3 hari (tepat SLA)", late: false, test: function (d) { return d <= 3; } },
+    { label: "4-5 hari",             late: true,  test: function (d) { return d >= 4 && d <= 5; } },
+    { label: "6-7 hari",             late: true,  test: function (d) { return d >= 6 && d <= 7; } },
+    { label: "lebih dari 7 hari",    late: true,  test: function (d) { return d > 7; } }
+  ];
+
+  function slaStat(list) {
+    var n = list.length, ok = 0, sum = 0;
+    list.forEach(function (d) { sum += d.days; if (d.days <= SLA_HARI) ok++; });
+    return { n: n, ok: ok, avg: n ? sum / n : 0, pct: n ? 100 * ok / n : 0 };
+  }
+
+  function aggregateSla(sources) {
+    var docs = [], pending = 0, invalid = 0;
+
+    sources.forEach(function (src) {
+      var head = src.rows[0] || [];
+      if ((head[SLA_COL_START] || "").trim() !== SLA_HDR_START ||
+          (head[SLA_COL_END] || "").trim() !== SLA_HDR_END) {
+        throw new Error("Struktur kolom sheet " + src.name + " berubah - " +
+          '"' + SLA_HDR_START + '" / "' + SLA_HDR_END + '" tidak ada di posisi yang diharapkan');
+      }
+      for (var i = 1; i < src.rows.length; i++) {
+        var r = src.rows[i];
+        if (!r) continue;
+        var start = parseSheetDate(r[SLA_COL_START]);
+        if (!start || start.getFullYear() !== PERIODE) continue;
+        var end = parseSheetDate(r[SLA_COL_END]);
+        if (!end) { pending++; continue; }        // sudah submit, SPTJP belum terbit
+        if (end < start) { invalid++; continue; } // tanggal terbalik - jangan dirata-rata
+        docs.push({ src: src.name, start: start, days: workingDaysBetween(start, end) });
+      }
+    });
+
+    if (!docs.length) {
+      throw new Error("Tidak ada dokumen dengan VIP submission & SPTJP terbit di tahun " + PERIODE);
+    }
+
+    var bySource = sources.map(function (src) {
+      var list = docs.filter(function (d) { return d.src === src.name; });
+      var s = slaStat(list);
+      s.name = src.name;
+      return s;
+    }).filter(function (s) { return s.n > 0; });
+
+    var monthMap = {};
+    docs.forEach(function (d) {
+      var k = d.start.getMonth();
+      (monthMap[k] = monthMap[k] || []).push(d);
+    });
+    var byMonth = Object.keys(monthMap).map(function (k) {
+      var s = slaStat(monthMap[k]);
+      s.name = MONTH_ID[k] + " " + PERIODE;
+      s.order = parseInt(k, 10);
+      return s;
+    }).sort(function (a, b) { return a.order - b.order; });
+
+    var buckets = BUCKETS.map(function (b) {
+      var n = docs.filter(function (d) { return b.test(d.days); }).length;
+      return { label: b.label, late: b.late, n: n, share: 100 * n / docs.length };
+    });
+
+    return {
+      total: slaStat(docs),
+      bySource: bySource,
+      byMonth: byMonth,
+      buckets: buckets,
+      pending: pending,
+      invalid: invalid
+    };
+  }
+
+  function fmtDays(v) { return fmtNum(v, 1) + " hari"; }
+
+  function renderSla(data) {
+    document.getElementById("sla-hero-pct").textContent = fmtPct(data.total.pct);
+    document.getElementById("sla-hero-ok").textContent = data.total.ok.toLocaleString("id-ID");
+    document.getElementById("sla-hero-n").textContent = data.total.n.toLocaleString("id-ID");
+    document.getElementById("sla-hero-avg").textContent = fmtDays(data.total.avg);
+    document.getElementById("sla-hero-target").textContent = "maks " + SLA_HARI + " hari kerja";
+
+    var srcEl = document.getElementById("sla-source");
+    srcEl.textContent = "";
+    data.bySource.forEach(function (s) {
+      var row = meterRow(s.name, fmtPct(s.pct), Math.max(0, Math.min(100, s.pct)), false,
+        s.n.toLocaleString("id-ID") + " dokumen · rata-rata " + fmtDays(s.avg));
+      row.title = s.name + "\n" + s.ok + " dari " + s.n + " dokumen terbit dalam " + SLA_HARI + " hari kerja";
+      srcEl.appendChild(row);
+    });
+
+    var bucketEl = document.getElementById("sla-bucket");
+    bucketEl.textContent = "";
+    data.buckets.forEach(function (b) {
+      var row = meterRow(b.label, fmtPct(b.share), Math.max(0, Math.min(100, b.share)), b.late,
+        b.n.toLocaleString("id-ID") + " dokumen");
+      bucketEl.appendChild(row);
+    });
+
+    var tbody = document.getElementById("sla-tbody");
+    tbody.textContent = "";
+    data.byMonth.forEach(function (m) {
+      addRow(tbody, [m.name, m.n.toLocaleString("id-ID"), fmtNum(m.avg, 1), m.ok.toLocaleString("id-ID"), fmtPct(m.pct)], false);
+    });
+    addRow(tbody, [
+      "Total " + PERIODE,
+      data.total.n.toLocaleString("id-ID"),
+      fmtNum(data.total.avg, 1),
+      data.total.ok.toLocaleString("id-ID"),
+      fmtPct(data.total.pct)
+    ], true);
+
+    var note = "SLA = selisih VIP submission s.d. SPTJP terbit, maksimal " + SLA_HARI +
+      " hari kerja. Sabtu, Minggu, libur nasional & cuti bersama tidak dihitung.";
+    if (data.pending) {
+      note += " " + data.pending + " dokumen sudah submit tapi SPTJP belum terbit (tidak dirata-rata).";
+    }
+    if (data.invalid) {
+      note += " " + data.invalid + " dokumen dilewati karena tanggal terbit mendahului tanggal submission.";
+    }
+    document.getElementById("sla-note").textContent = note;
+
+    stampNow();
+  }
+
+  function loadSla() {
+    setStateSla("loading");
+    Promise.all(SLA_SOURCES.map(function (src) {
+      return fetchCsv("https://docs.google.com/spreadsheets/d/" + SLA_SHEET_ID +
+        "/export?format=csv&gid=" + src.gid + "&range=" + src.range)
+        .then(function (rows) { return { name: src.name, rows: rows }; });
+    }))
+      .then(function (sources) {
+        renderSla(aggregateSla(sources));
+        setStateSla("ok");
+      })
+      .catch(function (err) {
+        setStateSla("error",
+          "Gagal mengambil data SLA (" + err.message + "). Periksa koneksi internet lalu coba lagi.");
+      });
+  }
+
+  /* =====================================================================
+     Potongan DOM yang dipakai kedua tab
+     ===================================================================== */
+
+  function meterRow(name, pctText, width, late, valsText) {
+    var row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML =
+      '<div class="top"><span class="name"></span><span class="pct"></span></div>' +
+      '<div class="meter"><div class="bar"></div></div>' +
+      '<div class="vals"></div>';
+    row.querySelector(".name").textContent = name;
+    row.querySelector(".pct").textContent = pctText;
+    var bar = row.querySelector(".bar");
+    bar.style.width = width + "%";
+    if (late) bar.classList.add("late");
+    row.querySelector(".vals").textContent = valsText;
+    return row;
+  }
+
+  function addRow(tbody, cells, isTotal) {
+    var tr = document.createElement("tr");
+    if (isTotal) tr.className = "total";
+    cells.forEach(function (c) {
+      var td = document.createElement("td");
+      td.textContent = c;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+    return tr;
+  }
+
+  /* =====================================================================
+     Tab switcher
+     ===================================================================== */
+
+  var views = {
+    aki: {
+      tab: document.getElementById("tab-aki"),
+      section: document.getElementById("view-aki"),
+      load: loadAki,
+      started: false,
+      state: "loading",
+      eyebrow: "Monitoring AKI Non Rutin - BPO OPK",
+      title: "Realisasi Pembayaran vs Target AKI 2026"
+    },
+    sla: {
+      tab: document.getElementById("tab-sla"),
+      section: document.getElementById("view-sla"),
+      load: loadSla,
+      started: false,
+      state: "loading",
+      eyebrow: "Monitoring Proses Pembayaran - BPO OPK",
+      title: "Rekapitulasi SLA Proses VIP " + PERIODE
+    }
+  };
+  var active = "aki";
+
+  var setStateAki = makeSetState("aki", document.getElementById("status"), document.getElementById("content"), loadAki);
+  var setStateSla = makeSetState("sla", document.getElementById("sla-status"), document.getElementById("sla-content"), loadSla);
+
+  function syncRefreshBtn() {
+    var v = views[active];
+    btnRefresh.hidden = v.state === "loading";
+    btnRefresh.disabled = v.state === "loading";
+  }
+
+  function activate(key, fromHash) {
+    active = key;
+    if (!fromHash && location.hash !== "#" + key) {
+      history.replaceState(null, "", "#" + key);
+    }
+    Object.keys(views).forEach(function (k) {
+      var v = views[k];
+      v.section.hidden = k !== key;
+      v.tab.setAttribute("aria-selected", k === key ? "true" : "false");
+    });
+    var v = views[key];
+    elEyebrow.textContent = v.eyebrow;
+    elTitle.textContent = v.title;
+    syncRefreshBtn();
+    if (!v.started) { v.started = true; v.load(); }
+  }
+
+  Object.keys(views).forEach(function (k) {
+    views[k].tab.addEventListener("click", function () { activate(k); });
+  });
+  btnRefresh.addEventListener("click", function () { views[active].load(); });
+  window.addEventListener("hashchange", function () {
+    var k = location.hash.replace("#", "");
+    if (views[k] && k !== active) activate(k, true);
+  });
+
+  // Tab bisa ditautkan langsung: .../#sla membuka rekap SLA.
+  var start = location.hash.replace("#", "");
+  activate(views[start] ? start : "aki", true);
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").catch(function () { /* offline shell opsional */ });

@@ -1,7 +1,7 @@
 {
-  "name": "LKAI OPK 2 — Realisasi vs Target AKI 2026",
+  "name": "Dashboard AKI & SLA VIP — BPO OPK",
   "short_name": "LKAI OPK 2",
-  "description": "Dashboard live capaian realisasi pembayaran terhadap Target AKI 2026, BPO OPK 2.",
+  "description": "Dashboard live capaian realisasi pembayaran terhadap Target AKI 2026 dan rekapitulasi SLA proses VIP, BPO OPK.",
   "lang": "id",
   "start_url": "./",
   "scope": "./",
