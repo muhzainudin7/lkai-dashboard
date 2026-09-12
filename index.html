@@ -66,7 +66,7 @@
   #btn-refresh:focus-visible { outline: 2px solid var(--fill); outline-offset: 2px; }
   #btn-refresh:disabled { color: var(--muted); }
 
-  /* Tab: satu app, dua tampilan */
+  /* Tab: satu app, beberapa tampilan */
   .tabs {
     display: flex; gap: 4px;
     background: var(--surface); border: 1px solid var(--border);
@@ -74,9 +74,10 @@
   }
   .tabs button {
     flex: 1; cursor: pointer;
-    font: 600 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: 600 13px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif;
+    text-wrap: balance;
     color: var(--ink-2); background: none; border: none;
-    border-radius: 7px; padding: 10px 8px;
+    border-radius: 7px; padding: 8px 6px;
   }
   .tabs button[aria-selected="true"] { background: var(--fill); color: #fff; }
   .tabs button:focus-visible { outline: 2px solid var(--fill); outline-offset: 2px; }
@@ -169,6 +170,12 @@
     border-bottom: 1px solid var(--grid);
   }
   thead th:first-child { text-align: left; }
+  /* Header boleh turun baris agar 5 kolom Tabel Rekap muat di layar HP tanpa geser */
+  thead th { white-space: normal; vertical-align: bottom; }
+  @media (max-width: 420px) {
+    table { font-size: 12px; }
+    th, td { padding: 6px 3px; }
+  }
   td { border-bottom: 1px solid var(--grid); text-align: right; font-variant-numeric: tabular-nums; }
   td:first-child { text-align: left; font-variant-numeric: normal; }
   tbody tr:last-child td { border-bottom: none; }
@@ -193,28 +200,31 @@
 
   <div class="tabs" role="tablist">
     <button id="tab-aki" type="button" role="tab" aria-selected="true" aria-controls="view-aki">AKI 2026</button>
+    <button id="tab-aki-um" type="button" role="tab" aria-selected="false" aria-controls="view-aki-um">AKI 2026 Exc UM</button>
     <button id="tab-sla" type="button" role="tab" aria-selected="false" aria-controls="view-sla">SLA VIP</button>
   </div>
 
-  <!-- ================= Tab 1: Realisasi vs Target AKI ================= -->
+  <!-- ================= Tab 1: Realisasi vs Target AKI =================
+       Tab "AKI 2026 Exc UM" tidak punya markup sendiri: script menyalin
+       section ini (cloneNode), karena itu elemen isi memakai data-f, bukan id. -->
   <section class="view" id="view-aki" role="tabpanel" aria-labelledby="tab-aki">
-    <div class="card status" id="status">
+    <div class="card status" data-f="status">
       <div class="spin"></div>
       <div class="msg">Mengambil data terbaru dari Google Sheets&hellip;</div>
     </div>
 
-    <div class="view" id="content" hidden>
+    <div class="view" data-f="content" hidden>
       <div class="card hero">
         <img class="logo" src="logo-PLN.png" alt="PLN">
         <div class="stat">
           <p class="label">Total OPK 1</p>
-          <div class="big" id="hero-opk1-pct"></div>
-          <div class="ctx"><b id="hero-opk1-real"></b> dari <b id="hero-opk1-target"></b></div>
+          <div class="big" data-f="hero-opk1-pct"></div>
+          <div class="ctx"><b data-f="hero-opk1-real"></b> dari <b data-f="hero-opk1-target"></b></div>
         </div>
         <div class="stat">
           <p class="label">Total OPK 2</p>
-          <div class="big" id="hero-opk2-pct"></div>
-          <div class="ctx"><b id="hero-opk2-real"></b> dari <b id="hero-opk2-target"></b></div>
+          <div class="big" data-f="hero-opk2-pct"></div>
+          <div class="ctx"><b data-f="hero-opk2-real"></b> dari <b data-f="hero-opk2-target"></b></div>
         </div>
       </div>
 
@@ -225,7 +235,7 @@
           <span><i class="key fill"></i>Realisasi s.d n</span>
           <span><i class="key track"></i>Target AKI 2026</span>
         </div>
-        <div id="chart"></div>
+        <div data-f="chart"></div>
       </div>
 
       <div class="card">
@@ -238,13 +248,14 @@
                 <th>BPO Kinerja</th>
                 <th>Target AKI 2026</th>
                 <th>Realisasi s.d n</th>
+                <th>Sisa Target</th>
                 <th>%</th>
               </tr>
             </thead>
-            <tbody id="tbody"></tbody>
+            <tbody data-f="tbody"></tbody>
           </table>
         </div>
-        <p class="unit-note">1 Miliar = Rp 1.000.000.000. Persentase = Realisasi s.d n &divide; Target AKI 2026.</p>
+        <p class="unit-note" data-f="um-note" hidden></p>
       </div>
 
       <footer>
@@ -337,6 +348,12 @@
   var HEADER_ROWS = 7;      // data mulai baris ke-8
   var ROW_H5 = 4, ROW_H6 = 5; // baris header (0-based) tempat teks kolom dicocokkan
   var FILTER_BPO = ["OPK 1", "OPK 2"];
+
+  // Komitmen Uang Muka untuk tab "AKI 2026 Exc UM": sheet HISTORY, blok H:L
+  // (BPO UIP | BPO KIN | No PRK | Program Utama/Proyek | Komitmen UM).
+  // Range mulai baris 3 (header) supaya strukturnya bisa diperiksa. ±2 KB.
+  var HISTORY_CSV =
+    "https://docs.google.com/spreadsheets/d/1cZzH3M6-VN1l3iKxuRtL-PHlKbYdCOiFNqGCPgBYP2w/export?format=csv&gid=1084186449&range=H3:L3000";
 
   // Sheet "Rekapitulasi Tagihan": header di baris 17, data mulai baris 18.
   // Range diambil MULAI baris 17 supaya baris pertama bisa dipakai sebagai
@@ -602,12 +619,17 @@
     return cols;
   }
 
-  function aggregate(rows, cols) {
+  // um (opsional, khusus tab Exc UM): { byPrk: { "No PRK": nilai }, prkCol: indeks kolom No PRK }.
+  // Target AKI tiap PRK dikurangi Komitmen UM-nya - sekali per PRK, walau PRK
+  // itu muncul di beberapa baris kegiatan.
+  function aggregate(rows, cols, um) {
     var groups = {};
     // Total per BPO asli (lintas KIN) - independen dari grup KIN gabungan di bawah
     var opk1 = { target: 0, real: 0 };
     var opk2 = { target: 0, real: 0 };
-    var maxCol = Math.max(cols.bpo, cols.kin, cols.aki, cols.real);
+    var umLeft = {};
+    if (um) Object.keys(um.byPrk).forEach(function (k) { umLeft[k] = um.byPrk[k]; });
+    var maxCol = Math.max(cols.bpo, cols.kin, cols.aki, cols.real, um ? um.prkCol : -1);
     for (var i = HEADER_ROWS; i < rows.length; i++) {
       var r = rows[i];
       if (!r || r.length <= maxCol) continue;
@@ -615,6 +637,13 @@
       if (FILTER_BPO.indexOf(bpo) === -1) continue;
       var target = parseIdNumber(r[cols.aki]);
       var real = parseIdNumber(r[cols.real]);
+      if (um) {
+        var prk = (r[um.prkCol] || "").trim();
+        if (prk && Object.prototype.hasOwnProperty.call(umLeft, prk)) {
+          target -= umLeft[prk];
+          delete umLeft[prk];
+        }
+      }
 
       var kin = (r[cols.kin] || "").trim() || "(tanpa KIN)";
       if (!groups[kin]) groups[kin] = { name: kin, target: 0, real: 0 };
@@ -641,23 +670,48 @@
     return {
       rows: list,
       totalOpk1: { target: opk1.target, real: opk1.real, pct: opk1.target !== 0 ? 100 * opk1.real / opk1.target : 0 },
-      totalOpk2: { target: opk2.target, real: opk2.real, pct: opk2.target !== 0 ? 100 * opk2.real / opk2.target : 0 }
+      totalOpk2: { target: opk2.target, real: opk2.real, pct: opk2.target !== 0 ? 100 * opk2.real / opk2.target : 0 },
+      unmatchedUm: Object.keys(umLeft)   // PRK di HISTORY yang tak ketemu di baris OPK 1/OPK 2
     };
+  }
+
+  // ---- Komitmen UM dari sheet HISTORY -> { "No PRK": nilai } ----
+  function parseUm(rows) {
+    var head = rows[0] || [];
+    var cPrk = findColumn(head, "No PRK");
+    var cUm = findColumn(head, "Komitmen UM");
+    if (cPrk === -1 || cUm === -1) {
+      throw new Error('Struktur sheet HISTORY berubah - kolom "No PRK" / "Komitmen UM" tidak ditemukan');
+    }
+    var byPrk = {}, n = 0;
+    for (var i = 1; i < rows.length; i++) {
+      var r = rows[i];
+      if (!r) continue;
+      var prk = (r[cPrk] || "").trim();
+      if (!prk) continue;
+      byPrk[prk] = (byPrk[prk] || 0) + parseIdNumber(r[cUm]);
+      n++;
+    }
+    if (!n) throw new Error("Sheet HISTORY tidak berisi data Komitmen UM");
+    return byPrk;
   }
 
   // ---- Format tampilan ----
   function fmtM(v) { return fmtNum(v / 1e9, 2); }
   function fmtFull(v) { return "Rp " + Math.round(v).toLocaleString("id-ID"); }
 
-  function renderAki(data) {
-    document.getElementById("hero-opk1-pct").textContent = fmtPct(data.totalOpk1.pct);
-    document.getElementById("hero-opk1-real").textContent = fmtFull(data.totalOpk1.real);
-    document.getElementById("hero-opk1-target").textContent = fmtFull(data.totalOpk1.target);
-    document.getElementById("hero-opk2-pct").textContent = fmtPct(data.totalOpk2.pct);
-    document.getElementById("hero-opk2-real").textContent = fmtFull(data.totalOpk2.real);
-    document.getElementById("hero-opk2-target").textContent = fmtFull(data.totalOpk2.target);
+  function field(root, name) { return root.querySelector('[data-f="' + name + '"]'); }
 
-    var chart = document.getElementById("chart");
+  // Dipakai tab "AKI 2026" dan "AKI 2026 Exc UM" - root = section tab masing-masing.
+  function renderAki(root, data) {
+    field(root, "hero-opk1-pct").textContent = fmtPct(data.totalOpk1.pct);
+    field(root, "hero-opk1-real").textContent = fmtFull(data.totalOpk1.real);
+    field(root, "hero-opk1-target").textContent = fmtFull(data.totalOpk1.target);
+    field(root, "hero-opk2-pct").textContent = fmtPct(data.totalOpk2.pct);
+    field(root, "hero-opk2-real").textContent = fmtFull(data.totalOpk2.real);
+    field(root, "hero-opk2-target").textContent = fmtFull(data.totalOpk2.target);
+
+    var chart = field(root, "chart");
     chart.textContent = "";
     data.rows.forEach(function (r) {
       var w = Math.max(0, Math.min(100, r.pct));
@@ -666,7 +720,7 @@
       chart.appendChild(row);
     });
 
-    var tbody = document.getElementById("tbody");
+    var tbody = field(root, "tbody");
     tbody.textContent = "";
     data.rows
       .concat([
@@ -674,23 +728,63 @@
         { name: "Total OPK 2", target: data.totalOpk2.target, real: data.totalOpk2.real, pct: data.totalOpk2.pct, isTotal: true }
       ])
       .forEach(function (r) {
-        var tr = addRow(tbody, [r.name, fmtM(r.target), fmtM(r.real), fmtPct(r.pct)], r.isTotal);
-        tr.title = "Target: " + fmtFull(r.target) + "\nRealisasi: " + fmtFull(r.real);
+        var sisa = r.target - r.real;
+        if (Math.abs(sisa) < 0.5) sisa = 0;   // cegah "-0,00" akibat pembulatan floating point
+        var tr = addRow(tbody, [r.name, fmtM(r.target), fmtM(r.real), fmtM(sisa), fmtPct(r.pct)], r.isTotal);
+        tr.title = "Target: " + fmtFull(r.target) + "\nRealisasi: " + fmtFull(r.real) + "\nSisa Target: " + fmtFull(sisa);
       });
+
+    var note = field(root, "um-note");
+    var miss = data.unmatchedUm || [];
+    note.hidden = !miss.length;
+    note.textContent = miss.length
+      ? "Perhatian: Komitmen UM untuk " + miss.length + " PRK tidak ditemukan pada baris OPK 1/OPK 2 " +
+        "di LKAI Terbit sehingga belum dikurangkan: " + miss.join(", ") + "."
+      : "";
 
     stampNow();
   }
 
-  function loadAki() {
+  // Tab "AKI 2026" dan "AKI 2026 Exc UM" memakai CSV LKAI yang sama (±900 KB):
+  // unduh sekali, pakai berdua. force = true saat user menekan "Muat ulang".
+  var lkaiPromise = null;
+  function getLkaiRows(force) {
+    if (force || !lkaiPromise) {
+      var p = fetchCsv(SHEET_CSV);
+      lkaiPromise = p;
+      p.catch(function () { if (lkaiPromise === p) lkaiPromise = null; });  // gagal -> berikutnya unduh ulang
+    }
+    return lkaiPromise;
+  }
+
+  function loadAki(force) {
     setStateAki("loading");
-    fetchCsv(SHEET_CSV)
+    getLkaiRows(force)
       .then(function (rows) {
         var cols = resolveColumns(rows);
-        renderAki(aggregate(rows, cols));
+        renderAki(views.aki.section, aggregate(rows, cols));
         setStateAki("ok");
       })
       .catch(function (err) {
         setStateAki("error",
+          "Gagal mengambil data (" + err.message + "). Periksa koneksi internet lalu coba lagi.");
+      });
+  }
+
+  function loadAkiUm(force) {
+    setStateAkiUm("loading");
+    Promise.all([getLkaiRows(force), fetchCsv(HISTORY_CSV)])
+      .then(function (res) {
+        var rows = res[0];
+        var cols = resolveColumns(rows);
+        // Kolom No PRK hanya dicari di sini, supaya tab AKI biasa tidak ikut gagal bila kolom itu hilang.
+        var prkCol = findColumn(rows[ROW_H5] || [], "No PRK");
+        if (prkCol === -1) throw new Error("Struktur header sheet berubah - kolom tidak ditemukan: No PRK");
+        renderAki(views["aki-um"].section, aggregate(rows, cols, { byPrk: parseUm(res[1]), prkCol: prkCol }));
+        setStateAkiUm("ok");
+      })
+      .catch(function (err) {
+        setStateAkiUm("error",
           "Gagal mengambil data (" + err.message + "). Periksa koneksi internet lalu coba lagi.");
       });
   }
@@ -842,7 +936,7 @@
   }
 
   /* =====================================================================
-     Potongan DOM yang dipakai kedua tab
+     Potongan DOM yang dipakai semua tab
      ===================================================================== */
 
   function meterRow(name, pctText, width, late, valsText) {
@@ -877,15 +971,33 @@
      Tab switcher
      ===================================================================== */
 
+  // Tab "AKI 2026 Exc UM" = salinan persis section "AKI 2026", supaya posisi
+  // dan isi grafik tidak bisa melenceng antar-tab. Dibuat sebelum data dimuat.
+  var viewAki = document.getElementById("view-aki");
+  var viewAkiUm = viewAki.cloneNode(true);
+  viewAkiUm.id = "view-aki-um";
+  viewAkiUm.setAttribute("aria-labelledby", "tab-aki-um");
+  viewAkiUm.hidden = true;
+  viewAki.parentNode.insertBefore(viewAkiUm, viewAki.nextSibling);
+
   var views = {
     aki: {
       tab: document.getElementById("tab-aki"),
-      section: document.getElementById("view-aki"),
+      section: viewAki,
       load: loadAki,
       started: false,
       state: "loading",
       eyebrow: "Monitoring AKI Non Rutin - BPO OPK",
       title: "Realisasi Pembayaran vs Target AKI 2026"
+    },
+    "aki-um": {
+      tab: document.getElementById("tab-aki-um"),
+      section: viewAkiUm,
+      load: loadAkiUm,
+      started: false,
+      state: "loading",
+      eyebrow: "Monitoring AKI Non Rutin - BPO OPK",
+      title: "Realisasi Pembayaran vs Target AKI 2026 Exc UM"
     },
     sla: {
       tab: document.getElementById("tab-sla"),
@@ -899,7 +1011,8 @@
   };
   var active = "aki";
 
-  var setStateAki = makeSetState("aki", document.getElementById("status"), document.getElementById("content"), loadAki);
+  var setStateAki = makeSetState("aki", field(viewAki, "status"), field(viewAki, "content"), loadAki);
+  var setStateAkiUm = makeSetState("aki-um", field(viewAkiUm, "status"), field(viewAkiUm, "content"), loadAkiUm);
   var setStateSla = makeSetState("sla", document.getElementById("sla-status"), document.getElementById("sla-content"), loadSla);
 
   function syncRefreshBtn() {
@@ -928,13 +1041,19 @@
   Object.keys(views).forEach(function (k) {
     views[k].tab.addEventListener("click", function () { activate(k); });
   });
-  btnRefresh.addEventListener("click", function () { views[active].load(); });
+  btnRefresh.addEventListener("click", function () {
+    // Dua tab AKI berbagi data LKAI: setelah dimuat ulang dari satu tab, tab
+    // saudaranya ikut dirender ulang saat dibuka agar angkanya tidak beda versi.
+    if (active === "aki") views["aki-um"].started = false;
+    if (active === "aki-um") views.aki.started = false;
+    views[active].load(true);
+  });
   window.addEventListener("hashchange", function () {
     var k = location.hash.replace("#", "");
     if (views[k] && k !== active) activate(k, true);
   });
 
-  // Tab bisa ditautkan langsung: .../#sla membuka rekap SLA.
+  // Tab bisa ditautkan langsung: .../#aki-um membuka AKI Exc UM, .../#sla membuka rekap SLA.
   var start = location.hash.replace("#", "");
   activate(views[start] ? start : "aki", true);
 
