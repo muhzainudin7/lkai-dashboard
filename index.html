@@ -20,7 +20,7 @@
     --fill: #2a78d6;
     --track: #cde2fb;
     --err: #d03b3b;
-    --warn: #c27803;
+    --warn: #e8710a;   /* oranye - sengaja jauh dari merah --err */
     --hero-overlay: rgba(252, 252, 251, 0.72);
   }
   @media (prefers-color-scheme: dark) {
@@ -35,7 +35,7 @@
       --fill: #3987e5;
       --track: #104281;
       --err: #e66767;
-      --warn: #e3a23b;
+      --warn: #f5a042;
       --hero-overlay: rgba(26, 26, 25, 0.72);
     }
   }
@@ -131,16 +131,14 @@
     position: absolute; top: 12px; right: 12px;
     height: 30px; width: auto; /* rasio asli 187:256 dipertahankan */
   }
-  /* .kpi = kartu angka seperti hero tapi tanpa gambar latar (satu hero per halaman) */
-  .kpi { display: flex; gap: 20px; flex-wrap: wrap; }
-  .hero .stat, .kpi .stat { flex: 1 1 130px; min-width: 130px; }
-  .hero .stat .label, .kpi .stat .label {
+  .hero .stat { flex: 1 1 130px; min-width: 130px; }
+  .hero .stat .label {
     font-size: 11px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase;
     color: var(--ink-2); margin: 0 0 2px;
   }
-  .hero .big, .kpi .big { font-size: 32px; font-weight: 600; line-height: 1.1; }
-  .hero .ctx, .kpi .ctx { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
-  .hero .ctx b, .kpi .ctx b { color: var(--ink); font-weight: 600; }
+  .hero .big { font-size: 32px; font-weight: 600; line-height: 1.1; }
+  .hero .ctx { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+  .hero .ctx b { color: var(--ink); font-weight: 600; }
 
   /* Chart */
   .card h2 { font-size: 13px; font-weight: 600; margin: 0 0 2px; }
@@ -194,36 +192,6 @@
   td.miss { color: var(--err); }
   .unit-note { font-size: 11px; color: var(--muted); margin: 8px 0 0; }
 
-  /* Tab Proses Tagihan: judul bagian, pesan gagal per bagian, daftar dokumen */
-  .section-title {
-    font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-    color: var(--ink-2); margin: 8px 0 -6px;
-  }
-  .section-title:first-child { margin-top: 0; }
-  .section-error { font-size: 13px; color: var(--err); }
-  .btn-inline {
-    font: 600 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
-    color: var(--fill); background: var(--surface);
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: 9px 14px; cursor: pointer;
-  }
-  .btn-inline:focus-visible { outline: 2px solid var(--fill); outline-offset: 2px; }
-  .inline-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--ink-2); }
-  .inline-status .spin { width: 14px; height: 14px; margin: 0; border-width: 2px; }
-  .inline-status.error { color: var(--err); }
-  .doc-list { list-style: none; margin: 0; padding: 0; }
-  .doc-list li { padding: 9px 0; border-bottom: 1px solid var(--grid); }
-  .doc-list li:first-child { padding-top: 0; }
-  .doc-list li:last-child { border-bottom: none; padding-bottom: 0; }
-  .doc-name {
-    font-size: 13px; font-weight: 500; line-height: 1.35;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-  }
-  .doc-meta { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
-  .doc-meta .tag { font-weight: 600; }
-  .doc-meta .tag.late { color: var(--err); }
-  .doc-meta .tag.warn { color: var(--ink); }
-
   footer { font-size: 11px; color: var(--muted); }
   [hidden] { display: none !important; }
 </style>
@@ -242,7 +210,8 @@
   <div class="tabs" role="tablist">
     <button id="tab-aki" type="button" role="tab" aria-selected="true" aria-controls="view-aki">AKI 2026</button>
     <button id="tab-aki-um" type="button" role="tab" aria-selected="false" aria-controls="view-aki-um">AKI 2026 Exc UM</button>
-    <button id="tab-sla" type="button" role="tab" aria-selected="false" aria-controls="view-sla">Proses Tagihan</button>
+    <button id="tab-lkp" type="button" role="tab" aria-selected="false" aria-controls="view-lkp">Penerimaan LKP</button>
+    <button id="tab-sla" type="button" role="tab" aria-selected="false" aria-controls="view-sla">SLA VIP</button>
   </div>
 
   <!-- ================= Tab 1: Realisasi vs Target AKI =================
@@ -306,9 +275,88 @@
     </div>
   </section>
 
-  <!-- ================= Tab 3: Proses Tagihan =================
-       Bagian 1: Dok LKP diterima vs target. Bagian 2: SLA proses VIP.
-       Sumber keduanya sheet Rekapitulasi Tagihan (Unit & Pusat). -->
+  <!-- ================= Tab 3: Penerimaan LKP =================
+       Dok LKP diterima dari DAL/LOG vs target. Sumber: sheet Rekapitulasi Tagihan
+       (Unit & Pusat) - sama dengan tab SLA VIP, datanya diambil sekali untuk berdua. -->
+  <section class="view" id="view-lkp" role="tabpanel" aria-labelledby="tab-lkp" hidden>
+    <div class="card status" id="lkp-status">
+      <div class="spin"></div>
+      <div class="msg">Mengambil data terbaru dari Google Sheets&hellip;</div>
+    </div>
+
+    <div class="view" id="lkp-content" hidden>
+      <div class="card hero">
+        <img class="logo" src="logo-PLN.png" alt="PLN">
+        <div class="stat">
+          <p class="label">Sesuai Target</p>
+          <div class="big" id="lkp-hero-pct"></div>
+          <div class="ctx"><b id="lkp-hero-ok"></b> dari <b id="lkp-hero-n"></b> dokumen</div>
+        </div>
+        <div class="stat">
+          <p class="label">Tidak Sesuai</p>
+          <div class="big" id="lkp-hero-miss"></div>
+          <div class="ctx"><b id="lkp-hero-late"></b> terlambat &middot; <b id="lkp-hero-pending"></b> belum diterima</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Kategori Penerimaan</h2>
+        <p class="sub">LKP diterima dari DAL/LOG dibanding tanggal target</p>
+        <div class="legend">
+          <span><i class="key fill"></i>Sesuai target</span>
+          <span><i class="key late"></i>Terlambat</span>
+          <span><i class="key warn"></i>Belum diterima</span>
+        </div>
+        <div id="lkp-cat"></div>
+      </div>
+
+      <div class="card">
+        <h2>Komposisi Keterlambatan</h2>
+        <p class="sub">Lama terlambat dari tanggal target, dalam hari kerja</p>
+        <div id="lkp-late"></div>
+      </div>
+
+      <div class="card">
+        <h2>Ketepatan per Bulan</h2>
+        <p class="sub">Dikelompokkan menurut bulan target &middot; Jan&ndash;Mar digabung ke April (belum ada anggaran)</p>
+        <div class="legend">
+          <span><i class="key fill"></i>Sesuai target</span>
+          <span><i class="key late"></i>Terlambat</span>
+          <span><i class="key warn"></i>Belum diterima</span>
+        </div>
+        <div id="lkp-month"></div>
+      </div>
+
+      <div class="card">
+        <h2>Rekap per Bulan Target</h2>
+        <p class="sub">Jumlah dokumen &middot; Jan&ndash;Mar digabung ke April (belum ada anggaran)</p>
+        <div class="tbl-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Bulan</th>
+                <th>Target</th>
+                <th>Awal</th>
+                <th>Tepat</th>
+                <th>Telat</th>
+                <th>Belum</th>
+                <th>% Sesuai</th>
+              </tr>
+            </thead>
+            <tbody id="lkp-tbody"></tbody>
+          </table>
+        </div>
+        <p class="unit-note" id="lkp-note"></p>
+      </div>
+
+      <footer>
+        Dashboard Live by Sub-Bidang Administrasi Teknik.<br>
+        Sumber: Google Sheet Bidang Keuangan &ldquo;Rekapitulasi Tagihan Pusat &amp; Unit&rdquo;
+      </footer>
+    </div>
+  </section>
+
+  <!-- ================= Tab 4: SLA Proses VIP ================= -->
   <section class="view" id="view-sla" role="tabpanel" aria-labelledby="tab-sla" hidden>
     <div class="card status" id="sla-status">
       <div class="spin"></div>
@@ -316,137 +364,58 @@
     </div>
 
     <div class="view" id="sla-content" hidden>
-      <p class="section-title">&#9312; Dok LKP Diterima vs Target</p>
-      <div class="card section-error" id="lkp-error" hidden></div>
-      <div class="view" id="lkp-body">
-        <div class="card hero">
-          <img class="logo" src="logo-PLN.png" alt="PLN">
-          <div class="stat">
-            <p class="label">Sesuai Target</p>
-            <div class="big" id="lkp-hero-pct"></div>
-            <div class="ctx"><b id="lkp-hero-ok"></b> dari <b id="lkp-hero-n"></b> dokumen</div>
-          </div>
-          <div class="stat">
-            <p class="label">Tidak Sesuai</p>
-            <div class="big" id="lkp-hero-miss"></div>
-            <div class="ctx"><b id="lkp-hero-late"></b> terlambat &middot; <b id="lkp-hero-pending"></b> belum diterima</div>
-          </div>
+      <div class="card hero">
+        <img class="logo" src="logo-PLN.png" alt="PLN">
+        <div class="stat">
+          <p class="label">Tepat SLA</p>
+          <div class="big" id="sla-hero-pct"></div>
+          <div class="ctx"><b id="sla-hero-ok"></b> dari <b id="sla-hero-n"></b> dokumen</div>
         </div>
-
-        <div class="card">
-          <h2>Kategori Penerimaan</h2>
-          <p class="sub">LKP diterima dari DAL/LOG dibanding tanggal target</p>
-          <div class="legend">
-            <span><i class="key fill"></i>Sesuai target</span>
-            <span><i class="key late"></i>Terlambat</span>
-            <span><i class="key warn"></i>Belum diterima</span>
-          </div>
-          <div id="lkp-cat"></div>
-        </div>
-
-        <div class="card">
-          <h2>Komposisi Keterlambatan</h2>
-          <p class="sub">Lama terlambat dari tanggal target, dalam hari kerja</p>
-          <div id="lkp-late"></div>
-        </div>
-
-        <div class="card">
-          <h2>Ketepatan per Bulan</h2>
-          <p class="sub">Dikelompokkan menurut bulan target</p>
-          <div class="legend">
-            <span><i class="key fill"></i>Sesuai target</span>
-            <span><i class="key late"></i>Terlambat</span>
-            <span><i class="key warn"></i>Belum diterima</span>
-          </div>
-          <div id="lkp-month"></div>
-        </div>
-
-        <div class="card">
-          <h2>Rekap per Bulan Target</h2>
-          <p class="sub">Jumlah dokumen</p>
-          <div class="tbl-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Bulan</th>
-                  <th>Target</th>
-                  <th>Awal</th>
-                  <th>Tepat</th>
-                  <th>Telat</th>
-                  <th>Belum</th>
-                  <th>% Sesuai</th>
-                </tr>
-              </thead>
-              <tbody id="lkp-tbody"></tbody>
-            </table>
-          </div>
-          <p class="unit-note" id="lkp-note"></p>
-        </div>
-
-        <div class="card">
-          <h2 id="lkp-list-title">Dokumen Terlambat &amp; Belum Diterima</h2>
-          <p class="sub">Belum diterima di atas, lalu yang paling lama terlambat</p>
-          <button class="btn-inline" id="lkp-list-btn" type="button">Lihat daftar</button>
-          <div class="inline-status" id="lkp-list-status" hidden></div>
-          <ul class="doc-list" id="lkp-list" hidden></ul>
+        <div class="stat">
+          <p class="label">Rata-rata Proses</p>
+          <div class="big" id="sla-hero-avg"></div>
+          <div class="ctx">Target SLA <b id="sla-hero-target"></b></div>
         </div>
       </div>
 
-      <p class="section-title">&#9313; SLA Proses VIP</p>
-      <div class="card section-error" id="sla-error" hidden></div>
-      <div class="view" id="sla-body">
-        <div class="card kpi">
-          <div class="stat">
-            <p class="label">Tepat SLA</p>
-            <div class="big" id="sla-hero-pct"></div>
-            <div class="ctx"><b id="sla-hero-ok"></b> dari <b id="sla-hero-n"></b> dokumen</div>
-          </div>
-          <div class="stat">
-            <p class="label">Rata-rata Proses</p>
-            <div class="big" id="sla-hero-avg"></div>
-            <div class="ctx">Target SLA <b id="sla-hero-target"></b></div>
-          </div>
+      <div class="card">
+        <h2>Pusat vs Unit</h2>
+        <p class="sub">Porsi dokumen yang terbit dalam SLA</p>
+        <div class="legend">
+          <span><i class="key fill"></i>Tepat SLA</span>
+          <span><i class="key track"></i>Melewati SLA</span>
         </div>
+        <div id="sla-source"></div>
+      </div>
 
-        <div class="card">
-          <h2>Pusat vs Unit</h2>
-          <p class="sub">Porsi dokumen yang terbit dalam SLA</p>
-          <div class="legend">
-            <span><i class="key fill"></i>Tepat SLA</span>
-            <span><i class="key track"></i>Melewati SLA</span>
-          </div>
-          <div id="sla-source"></div>
+      <div class="card">
+        <h2>Distribusi Lama Proses</h2>
+        <p class="sub">VIP submission &rarr; SPTJP terbit, dalam hari kerja</p>
+        <div class="legend">
+          <span><i class="key fill"></i>Tepat SLA</span>
+          <span><i class="key late"></i>Melewati SLA</span>
         </div>
+        <div id="sla-bucket"></div>
+      </div>
 
-        <div class="card">
-          <h2>Distribusi Lama Proses</h2>
-          <p class="sub">VIP submission &rarr; SPTJP terbit, dalam hari kerja</p>
-          <div class="legend">
-            <span><i class="key fill"></i>Tepat SLA</span>
-            <span><i class="key late"></i>Melewati SLA</span>
-          </div>
-          <div id="sla-bucket"></div>
+      <div class="card">
+        <h2>Rekap per Bulan</h2>
+        <p class="sub">Dikelompokkan menurut bulan VIP submission</p>
+        <div class="tbl-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Bulan</th>
+                <th>Dok</th>
+                <th>Rata&sup2;</th>
+                <th>Tepat</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody id="sla-tbody"></tbody>
+          </table>
         </div>
-
-        <div class="card">
-          <h2>Rekap per Bulan</h2>
-          <p class="sub">Dikelompokkan menurut bulan VIP submission</p>
-          <div class="tbl-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Bulan</th>
-                  <th>Dok</th>
-                  <th>Rata&sup2;</th>
-                  <th>Tepat</th>
-                  <th>%</th>
-                </tr>
-              </thead>
-              <tbody id="sla-tbody"></tbody>
-            </table>
-          </div>
-          <p class="unit-note" id="sla-note"></p>
-        </div>
+        <p class="unit-note" id="sla-note"></p>
       </div>
 
       <footer>
@@ -493,9 +462,9 @@
   var SLA_HDR_START = "VIP submission", SLA_HDR_END = "SPTJP terbit";
   // Bagian "Dok LKP diterima vs target" - kolom dicari dengan cara yang sama.
   var LKP_HDR_TARGET = "Target Dok Diterima Adtek", LKP_HDR_RECV = "LKP Diterima dari DAL/LOG";
-  // Hanya untuk daftar dokumen (diambil saat dibuka). Direksi dicocokkan di awal teks:
-  // Unit "Direksi Pekerjaan", Pusat "Direksi Pekerjaan/Direksi Teknis".
-  var LKP_HDR_NAME = "Nama Pekerjaan", LKP_HDR_DIREKSI = "Direksi Pekerjaan";
+  // Jan-Mar belum ada anggaran (belum ada target/proses tagihan), jadi pada rekap per
+  // bulan dokumen bertarget Jan-Mar digabung ke April. Total & kategori tidak berubah.
+  var LKP_BULAN_AWAL = 3;   // 0 = Januari, 3 = April
 
   var PERIODE = 2026;   // hanya dokumen dengan VIP submission di tahun ini
   var SLA_HARI = 3;     // SLA: maksimal 3 hari kerja
@@ -920,8 +889,8 @@
   }
 
   /* =====================================================================
-     Tab Proses Tagihan - bagian 2: SLA Proses VIP
-     (bagian 1, Dok LKP diterima vs target, ada di bawah setelah renderSla)
+     Tab SLA Proses VIP
+     (tab Penerimaan LKP ada di bawah, setelah renderSla)
      ===================================================================== */
 
   var BUCKETS = [
@@ -1074,26 +1043,18 @@
     return null;
   }
 
-  // Seperti findColumn, tapi cocok di awal teks.
-  function findColumnPrefix(headerRow, prefix) {
-    for (var i = 0; i < headerRow.length; i++) {
-      if ((headerRow[i] || "").trim().indexOf(prefix) === 0) return i;
-    }
-    return -1;
-  }
-
   // Ambil rentang kolom terkecil yang memuat semua `cols`, mulai dari baris header.
   // offsets = posisi tiap kolom di dalam rentang itu (urutan sama dengan `cols`).
   function fetchColumns(gid, headerRow, cols) {
     var lo = Math.min.apply(null, cols), hi = Math.max.apply(null, cols);
     var range = colLetter(lo) + (headerRow + 1) + ":" + colLetter(hi) + "20000";
     return fetchCsv(slaExportUrl(gid, range)).then(function (rows) {
-      return { rows: rows, headerRow: headerRow, offsets: cols.map(function (c) { return c - lo; }) };
+      return { rows: rows, offsets: cols.map(function (c) { return c - lo; }) };
     });
   }
 
   // Satu sheet Tagihan: scan header A1:ZZ30 SEKALI, lalu kolom SLA dan kolom LKP diambil
-  // paralel. Header yang tidak ketemu hanya menggagalkan bagiannya sendiri ({ error }).
+  // paralel. Header yang tidak ketemu hanya menggagalkan tab yang memakainya ({ error }).
   function fetchTagihanSource(src) {
     return fetchCsv(slaExportUrl(src.gid, SLA_HEADER_SCAN)).then(function (scan) {
       function part(texts) {
@@ -1106,13 +1067,13 @@
       }
       return Promise.all([part([SLA_HDR_START, SLA_HDR_END]), part([LKP_HDR_TARGET, LKP_HDR_RECV])])
         .then(function (parts) {
-          return { name: src.name, gid: src.gid, scan: scan, sla: parts[0], lkp: parts[1] };
+          return { name: src.name, sla: parts[0], lkp: parts[1] };
         });
     });
   }
 
   /* ---------------------------------------------------------------------
-     Tab Proses Tagihan - bagian 1: Dok LKP diterima vs target
+     Tab Penerimaan LKP - Dok LKP diterima vs target
      --------------------------------------------------------------------- */
 
   var LATE_BUCKETS = [
@@ -1148,8 +1109,7 @@
         var target = parseSheetDate(r[src.iTarget]);
         if (!target || target.getFullYear() !== PERIODE) continue;
         var recv = parseSheetDate(r[src.iRecv]);
-        // row = nomor baris dalam rentang yang diambil; dipakai lagi untuk mencocokkan nama pekerjaan.
-        var doc = { src: src.name, row: i, target: target, recv: recv, lateDays: 0 };
+        var doc = { src: src.name, target: target, recv: recv, lateDays: 0 };
         if (!recv) {
           if (target >= today) { notDue++; continue; }   // target belum lewat - belum bisa dinilai
           doc.cat = "pending";
@@ -1171,7 +1131,7 @@
 
     var monthMap = {};
     docs.forEach(function (d) {
-      var k = d.target.getMonth();
+      var k = Math.max(d.target.getMonth(), LKP_BULAN_AWAL);   // Jan-Mar -> April
       (monthMap[k] = monthMap[k] || []).push(d);
     });
     var byMonth = Object.keys(monthMap).map(function (k) {
@@ -1187,18 +1147,10 @@
       return { label: b.label, n: n, share: late.length ? 100 * n / late.length : 0 };
     });
 
-    // Belum diterima di atas (target paling lama dulu), lalu yang paling lama terlambat.
-    var problems = docs.filter(function (d) { return d.cat === "late" || d.cat === "pending"; })
-      .sort(function (a, b) {
-        if (a.cat !== b.cat) return a.cat === "pending" ? -1 : 1;
-        return a.cat === "pending" ? a.target - b.target : b.lateDays - a.lateDays;
-      });
-
-    return { total: lkpStat(docs), byMonth: byMonth, lateBuckets: lateBuckets, problems: problems, notDue: notDue };
+    return { total: lkpStat(docs), byMonth: byMonth, lateBuckets: lateBuckets, notDue: notDue };
   }
 
   function fmtCount(n) { return n.toLocaleString("id-ID"); }
-  function fmtShortDate(d) { return d.getDate() + " " + MONTH_ID[d.getMonth()]; }
 
   function lkpBreakdown(s) {
     var parts = [];
@@ -1263,142 +1215,50 @@
       note += " " + fmtCount(data.notDue) + " dokumen belum jatuh tempo (target belum lewat) belum dinilai.";
     }
     document.getElementById("lkp-note").textContent = note;
-
-    // Kartu daftar kembali ke keadaan awal setiap kali data dimuat (ulang).
-    var n = data.problems.length;
-    document.getElementById("lkp-list-title").textContent =
-      "Dokumen Terlambat & Belum Diterima (" + fmtCount(n) + ")";
-    var ul = document.getElementById("lkp-list");
-    var st = document.getElementById("lkp-list-status");
-    ul.hidden = true;
-    ul.textContent = "";
-    document.getElementById("lkp-list-btn").hidden = !n;
-    st.className = "inline-status";
-    st.hidden = !!n;
-    st.textContent = n ? "" : "Tidak ada dokumen yang terlambat atau belum diterima.";
   }
 
-  // Daftar dokumen butuh kolom nama pekerjaan (berat, ±780 KB), jadi baru diambil saat dibuka.
-  var lkpCtx = null;          // { sources, problems } dari muatan data terakhir
-  var lkpListPromise = null;  // nama pekerjaan & direksi untuk lkpCtx tersebut
-
-  function fetchLkpNames(ctx) {
-    return Promise.all(ctx.sources.map(function (s) {
-      var head = s.scan[s.lkp.headerRow] || [];
-      var cName = findColumn(head, LKP_HDR_NAME);
-      var cDir = findColumnPrefix(head, LKP_HDR_DIREKSI);
-      if (cName === -1 || cDir === -1) {
-        throw new Error('kolom "' + LKP_HDR_NAME + '" / "' + LKP_HDR_DIREKSI + '" di sheet ' +
-          s.name + " tidak ditemukan");
-      }
-      return fetchColumns(s.gid, s.lkp.headerRow, [cName, cDir]).then(function (res) {
-        var iName = res.offsets[0];
-        if (((res.rows[0] || [])[iName] || "").trim() !== LKP_HDR_NAME) {
-          throw new Error("struktur sheet " + s.name + " berubah saat dimuat - silakan muat ulang");
-        }
-        return { name: s.name, rows: res.rows, iName: iName, iDir: res.offsets[1] };
-      });
-    }));
-  }
-
-  function loadLkpList() {
-    var ctx = lkpCtx;
-    if (!ctx) return;
-    var btn = document.getElementById("lkp-list-btn");
-    var st = document.getElementById("lkp-list-status");
-    var ul = document.getElementById("lkp-list");
-    btn.hidden = true;
-    st.className = "inline-status";
-    st.innerHTML = '<div class="spin"></div><span>Mengambil nama pekerjaan&hellip;</span>';
-    st.hidden = false;
-
-    if (!lkpListPromise) {
-      var p = Promise.resolve(ctx).then(fetchLkpNames);
-      lkpListPromise = p;
-      p.catch(function () { if (lkpListPromise === p) lkpListPromise = null; });  // gagal -> boleh coba lagi
+  // Tab "Penerimaan LKP" dan "SLA VIP" memakai sheet Tagihan yang sama: unduh sekali,
+  // pakai berdua. force = true saat user menekan "Muat ulang".
+  var tagihanPromise = null;
+  function getTagihanSources(force) {
+    if (force || !tagihanPromise) {
+      var p = Promise.all(SLA_SOURCES.map(function (src) { return fetchTagihanSource(src); }));
+      tagihanPromise = p;
+      p.catch(function () { if (tagihanPromise === p) tagihanPromise = null; });  // gagal -> berikutnya unduh ulang
     }
-    lkpListPromise.then(function (extras) {
-      if (ctx !== lkpCtx) return;   // data sudah dimuat ulang selama menunggu
-      var bySrc = {};
-      extras.forEach(function (e) { bySrc[e.name] = e; });
-      ul.textContent = "";
-      ctx.problems.forEach(function (d) {
-        var ex = bySrc[d.src];
-        var r = ex.rows[d.row] || [];
-        var name = (r[ex.iName] || "").trim() || "(nama pekerjaan kosong)";
-        var dir = (r[ex.iDir] || "").trim();
-        if (!dir || dir === "-") dir = "Direksi tidak diisi";
-        var status = d.cat === "pending" ? "belum diterima"
-          : d.lateDays ? "telat " + d.lateDays + " hari kerja"
-          : "diterima di hari libur setelah target";
-        var li = document.createElement("li");
-        li.innerHTML = '<div class="doc-name"></div><div class="doc-meta"><span class="info"></span> · <span class="tag"></span></div>';
-        li.querySelector(".doc-name").textContent = name;
-        li.querySelector(".info").textContent = dir + " · " + d.src + " · target " + fmtShortDate(d.target) +
-          (d.recv ? " → " + fmtShortDate(d.recv) : "");
-        var tag = li.querySelector(".tag");
-        tag.textContent = status;
-        tag.classList.add(d.cat === "pending" ? "warn" : "late");
-        li.title = name;
-        ul.appendChild(li);
-      });
-      st.hidden = true;
-      ul.hidden = false;
-    }, function (err) {
-      if (ctx !== lkpCtx) return;
-      st.className = "inline-status error";
-      st.textContent = "Gagal memuat daftar (" + err.message + ").";
-      var retry = document.createElement("button");
-      retry.type = "button";
-      retry.className = "btn-inline";
-      retry.textContent = "Coba lagi";
-      retry.addEventListener("click", loadLkpList);
-      st.appendChild(retry);
-    });
-  }
-  document.getElementById("lkp-list-btn").addEventListener("click", loadLkpList);
-
-  // Render satu bagian tab; data yang bermasalah hanya menggagalkan bagian itu.
-  function renderSection(key, fn) {
-    var body = document.getElementById(key + "-body");
-    var errEl = document.getElementById(key + "-error");
-    try {
-      fn();
-      body.hidden = false;
-      errEl.hidden = true;
-    } catch (err) {
-      body.hidden = true;
-      errEl.hidden = false;
-      errEl.textContent = "Bagian ini gagal dimuat: " + err.message;
-    }
+    return tagihanPromise;
   }
 
-  function loadSla() {
-    setStateSla("loading");
-    Promise.all(SLA_SOURCES.map(function (src) { return fetchTagihanSource(src); }))
+  function loadLkp(force) {
+    setStateLkp("loading");
+    getTagihanSources(force)
       .then(function (sources) {
-        lkpCtx = null;
-        lkpListPromise = null;
-        renderSection("lkp", function () {
-          var data = aggregateLkp(sources.map(function (s) {
-            if (s.lkp.error) throw new Error(s.lkp.error);
-            return { name: s.name, rows: s.lkp.rows, iTarget: s.lkp.offsets[0], iRecv: s.lkp.offsets[1] };
-          }), new Date());
-          lkpCtx = { sources: sources, problems: data.problems };
-          renderLkp(data);
-        });
-        renderSection("sla", function () {
-          renderSla(aggregateSla(sources.map(function (s) {
-            if (s.sla.error) throw new Error(s.sla.error);
-            return { name: s.name, rows: s.sla.rows, iStart: s.sla.offsets[0], iEnd: s.sla.offsets[1] };
-          })));
-        });
+        renderLkp(aggregateLkp(sources.map(function (s) {
+          if (s.lkp.error) throw new Error(s.lkp.error);
+          return { name: s.name, rows: s.lkp.rows, iTarget: s.lkp.offsets[0], iRecv: s.lkp.offsets[1] };
+        }), new Date()));
         stampNow();
+        setStateLkp("ok");
+      })
+      .catch(function (err) {
+        setStateLkp("error",
+          "Gagal mengambil data (" + err.message + "). Periksa koneksi internet lalu coba lagi.");
+      });
+  }
+
+  function loadSla(force) {
+    setStateSla("loading");
+    getTagihanSources(force)
+      .then(function (sources) {
+        renderSla(aggregateSla(sources.map(function (s) {
+          if (s.sla.error) throw new Error(s.sla.error);
+          return { name: s.name, rows: s.sla.rows, iStart: s.sla.offsets[0], iEnd: s.sla.offsets[1] };
+        })));
         setStateSla("ok");
       })
       .catch(function (err) {
         setStateSla("error",
-          "Gagal mengambil data (" + err.message + "). Periksa koneksi internet lalu coba lagi.");
+          "Gagal mengambil data SLA (" + err.message + "). Periksa koneksi internet lalu coba lagi.");
       });
   }
 
@@ -1484,6 +1344,15 @@
       eyebrow: "Monitoring AKI Non Rutin - BPO OPK",
       title: "Realisasi Pembayaran vs Target AKI 2026 Exc UM"
     },
+    lkp: {
+      tab: document.getElementById("tab-lkp"),
+      section: document.getElementById("view-lkp"),
+      load: loadLkp,
+      started: false,
+      state: "loading",
+      eyebrow: "Monitoring Proses Pembayaran - BPO OPK",
+      title: "Penerimaan Dok LKP vs Target " + PERIODE
+    },
     sla: {
       tab: document.getElementById("tab-sla"),
       section: document.getElementById("view-sla"),
@@ -1491,13 +1360,14 @@
       started: false,
       state: "loading",
       eyebrow: "Monitoring Proses Pembayaran - BPO OPK",
-      title: "Proses Tagihan " + PERIODE
+      title: "Rekapitulasi SLA Proses VIP " + PERIODE
     }
   };
   var active = "aki";
 
   var setStateAki = makeSetState("aki", field(viewAki, "status"), field(viewAki, "content"), loadAki);
   var setStateAkiUm = makeSetState("aki-um", field(viewAkiUm, "status"), field(viewAkiUm, "content"), loadAkiUm);
+  var setStateLkp = makeSetState("lkp", document.getElementById("lkp-status"), document.getElementById("lkp-content"), loadLkp);
   var setStateSla = makeSetState("sla", document.getElementById("sla-status"), document.getElementById("sla-content"), loadSla);
 
   function syncRefreshBtn() {
@@ -1527,10 +1397,11 @@
     views[k].tab.addEventListener("click", function () { activate(k); });
   });
   btnRefresh.addEventListener("click", function () {
-    // Dua tab AKI berbagi data LKAI: setelah dimuat ulang dari satu tab, tab
-    // saudaranya ikut dirender ulang saat dibuka agar angkanya tidak beda versi.
-    if (active === "aki") views["aki-um"].started = false;
-    if (active === "aki-um") views.aki.started = false;
+    // Pasangan tab berbagi data (AKI & AKI Exc UM: CSV LKAI; Penerimaan LKP & SLA VIP:
+    // sheet Tagihan). Setelah dimuat ulang dari satu tab, tab pasangannya ikut dirender
+    // ulang saat dibuka agar angkanya tidak beda versi.
+    var partner = { aki: "aki-um", "aki-um": "aki", lkp: "sla", sla: "lkp" }[active];
+    if (partner) views[partner].started = false;
     views[active].load(true);
   });
   window.addEventListener("hashchange", function () {
@@ -1538,7 +1409,7 @@
     if (views[k] && k !== active) activate(k, true);
   });
 
-  // Tab bisa ditautkan langsung: .../#aki-um membuka AKI Exc UM, .../#sla membuka rekap SLA.
+  // Tab bisa ditautkan langsung: .../#aki-um (AKI Exc UM), .../#lkp (Penerimaan LKP), .../#sla (SLA VIP).
   var start = location.hash.replace("#", "");
   activate(views[start] ? start : "aki", true);
 
