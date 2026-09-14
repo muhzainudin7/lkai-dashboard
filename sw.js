@@ -1,6 +1,6 @@
 // Service worker minimal: cache app-shell agar terbuka instan/offline.
 // Data CSV TIDAK di-cache di sini (selalu network, dipanggil dari halaman).
-var CACHE = "lkai-shell-v5";
+var CACHE = "lkai-shell-v6";
 var SHELL = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "background-PLN.jpg", "logo-PLN.png"];
 
 self.addEventListener("install", function (e) {
