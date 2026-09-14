@@ -221,6 +221,26 @@
   td.miss { color: var(--err); }
   .unit-note { font-size: 11px; color: var(--muted); margin: 8px 0 0; }
 
+  /* Kartu Dokumen (PDF di Google Drive): info kiri, tombol kanan; tombol turun di layar sempit */
+  .doc-list { list-style: none; margin: 0; padding: 0; }
+  .doc-list li {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--grid);
+  }
+  .doc-list li:first-child { padding-top: 0; }
+  .doc-list li:last-child { border-bottom: none; padding-bottom: 0; }
+  .doc-info { flex: 1 1 200px; min-width: 0; }
+  .doc-title { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+  .doc-desc { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .doc-actions { display: flex; gap: 6px; flex: none; }
+  .btn-link {
+    display: inline-block; text-decoration: none;
+    font: 600 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--fill); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px;
+  }
+  .btn-link:focus-visible { outline: 2px solid var(--fill); outline-offset: 2px; }
+
   footer { font-size: 11px; color: var(--muted); }
   [hidden] { display: none !important; }
 </style>
@@ -295,6 +315,12 @@
           </table>
         </div>
         <p class="unit-note" data-f="um-note" hidden></p>
+      </div>
+
+      <div class="card" data-f="docs" hidden>
+        <h2>Dokumen</h2>
+        <p class="sub">Dibuka di Google Drive &middot; akses mengikuti izin file di Drive</p>
+        <ul class="doc-list" data-f="doc-list"></ul>
       </div>
 
       <footer>
@@ -479,6 +505,17 @@
   var HEADER_ROWS = 7;      // data mulai baris ke-8
   var ROW_H5 = 4, ROW_H6 = 5; // baris header (0-based) tempat teks kolom dicocokkan
   var FILTER_BPO = ["OPK 1", "OPK 2"];
+
+  // Kartu "Dokumen": PDF di Google Drive per tab (key = tab: "aki", "aki-um").
+  // Akses file diatur di Google Drive, bukan di dashboard. Mengganti isi PDF lewat
+  // Drive "Kelola versi" -> link tetap sama, dashboard tidak perlu diubah.
+  // Kartu tersembunyi selama daftar tab itu kosong.
+  var DOKUMEN = {
+    aki: [
+      // { judul: "Judul dokumen", keterangan: "opsional", url: "https://drive.google.com/file/d/<ID>/view?usp=sharing" }
+    ],
+    "aki-um": []
+  };
 
   // Komitmen Uang Muka untuk tab "AKI 2026 Exc UM": sheet HISTORY, blok H:L
   // (BPO UIP | BPO KIN | No PRK | Program Utama/Proyek | Komitmen UM).
@@ -1524,6 +1561,58 @@
     return row;
   }
 
+  // ID file Google Drive dari link ".../file/d/<ID>/view" atau "...?id=<ID>"; null bila bukan link file.
+  function driveFileId(url) {
+    var m = /\/file\/d\/([\w-]{10,})/.exec(url) || /[?&]id=([\w-]{10,})/.exec(url);
+    return m ? m[1] : null;
+  }
+
+  // Isi kartu "Dokumen" di section tab dari DOKUMEN[key]. Semua teks lewat textContent.
+  function renderDocs(root, key) {
+    var card = field(root, "docs");
+    var list = field(root, "doc-list");
+    var docs = (DOKUMEN[key] || []).filter(function (d) { return d && /^https:\/\//.test(d.url || ""); });
+    list.textContent = "";
+    card.hidden = !docs.length;
+    docs.forEach(function (d) {
+      var li = document.createElement("li");
+      var info = document.createElement("div");
+      info.className = "doc-info";
+      var title = document.createElement("div");
+      title.className = "doc-title";
+      title.textContent = d.judul || "Dokumen";
+      info.appendChild(title);
+      if (d.keterangan) {
+        var desc = document.createElement("div");
+        desc.className = "doc-desc";
+        desc.textContent = d.keterangan;
+        info.appendChild(desc);
+      }
+      var actions = document.createElement("div");
+      actions.className = "doc-actions";
+      function addLink(text, href) {
+        var a = document.createElement("a");
+        a.className = "btn-link";
+        a.href = href;
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.textContent = text;
+        a.setAttribute("aria-label", text + " " + (d.judul || "dokumen"));
+        actions.appendChild(a);
+      }
+      var id = driveFileId(d.url);
+      if (id) {
+        addLink("Lihat", d.url);
+        addLink("Unduh", "https://drive.google.com/uc?export=download&id=" + encodeURIComponent(id));
+      } else {
+        addLink("Buka", d.url);   // bukan link file Drive (mis. folder) - cukup dibuka
+      }
+      li.appendChild(info);
+      li.appendChild(actions);
+      list.appendChild(li);
+    });
+  }
+
   function addRow(tbody, cells, isTotal) {
     var tr = document.createElement("tr");
     if (isTotal) tr.className = "total";
@@ -1588,6 +1677,10 @@
     }
   };
   var active = "aki";
+
+  // Kartu Dokumen tidak bergantung data sheet: diisi sekali saat startup, per tab.
+  renderDocs(viewAki, "aki");
+  renderDocs(viewAkiUm, "aki-um");
 
   var setStateAki = makeSetState("aki", field(viewAki, "status"), field(viewAki, "content"), loadAki);
   var setStateAkiUm = makeSetState("aki-um", field(viewAkiUm, "status"), field(viewAkiUm, "content"), loadAkiUm);
