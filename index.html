@@ -318,7 +318,7 @@
 
       <div class="card">
         <h2>Ketepatan per Bulan</h2>
-        <p class="sub">Dikelompokkan menurut bulan target &middot; Jan&ndash;Mar digabung ke April (belum ada anggaran)</p>
+        <p class="sub">Dikelompokkan menurut bulan usulan &middot; Jan&ndash;Mar digabung ke April (belum ada anggaran)</p>
         <div class="legend">
           <span><i class="key fill"></i>Sesuai target</span>
           <span><i class="key late"></i>Terlambat</span>
@@ -328,7 +328,7 @@
       </div>
 
       <div class="card">
-        <h2>Rekap per Bulan Target</h2>
+        <h2>Rekap per Bulan Usulan</h2>
         <p class="sub">Jumlah dokumen &middot; Jan&ndash;Mar digabung ke April (belum ada anggaran)</p>
         <div class="tbl-scroll">
           <table>
@@ -462,8 +462,13 @@
   var SLA_HDR_START = "VIP submission", SLA_HDR_END = "SPTJP terbit";
   // Bagian "Dok LKP diterima vs target" - kolom dicari dengan cara yang sama.
   var LKP_HDR_TARGET = "Target Dok Diterima Adtek", LKP_HDR_RECV = "LKP Diterima dari DAL/LOG";
+  // Pengelompokan per bulan memakai BULAN USULAN (bukan bulan target). Nama header-nya beda
+  // antar-sheet: Unit "Usulan Bulan", Pusat "Bulan Usulan". Nilainya singkatan bulan campur
+  // ID/EN (Apr, Mei/May, Agt/Agu/Aug, Okt/Oct, ...). Kosong atau "-" = belum diusulkan ->
+  // dokumen itu tidak dihitung sama sekali dalam analisa (keputusan user).
+  var LKP_HDR_USULAN = ["Usulan Bulan", "Bulan Usulan"];
   // Jan-Mar belum ada anggaran (belum ada target/proses tagihan), jadi pada rekap per
-  // bulan dokumen bertarget Jan-Mar digabung ke April. Total & kategori tidak berubah.
+  // bulan, bulan usulan Jan-Mar digabung ke April.
   var LKP_BULAN_AWAL = 3;   // 0 = Januari, 3 = April
 
   var PERIODE = 2026;   // hanya dokumen dengan VIP submission di tahun ini
@@ -1034,10 +1039,18 @@
   }
 
   // Cari baris header pertama pada hasil scan yang memuat SEMUA teks `texts` (cocok persis).
+  // Elemen `texts` boleh berupa array alternatif, untuk header yang namanya beda antar-sheet.
   // Hasil: { row: indeks baris 0-based, cols: [indeks kolom per teks] }, atau null.
   function locateHeaders(scan, texts) {
     for (var r = 0; r < scan.length; r++) {
-      var cols = texts.map(function (t) { return findColumn(scan[r] || [], t); });
+      var cols = texts.map(function (t) {
+        var alts = [].concat(t);
+        for (var a = 0; a < alts.length; a++) {
+          var c = findColumn(scan[r] || [], alts[a]);
+          if (c !== -1) return c;
+        }
+        return -1;
+      });
       if (cols.every(function (c) { return c !== -1; })) return { row: r, cols: cols };
     }
     return null;
@@ -1057,18 +1070,34 @@
   // paralel. Header yang tidak ketemu hanya menggagalkan tab yang memakainya ({ error }).
   function fetchTagihanSource(src) {
     return fetchCsv(slaExportUrl(src.gid, SLA_HEADER_SCAN)).then(function (scan) {
-      function part(texts) {
+      function locate(texts) {
         var loc = locateHeaders(scan, texts);
         if (!loc) {
           return { error: "Struktur kolom sheet " + src.name + " berubah - " +
-            texts.map(function (t) { return '"' + t + '"'; }).join(" / ") + " tidak ditemukan" };
+            texts.map(function (t) { return '"' + [].concat(t).join('" atau "') + '"'; }).join(" / ") +
+            " tidak ditemukan" };
         }
-        return fetchColumns(src.gid, loc.row, loc.cols);
+        return loc;
       }
-      return Promise.all([part([SLA_HDR_START, SLA_HDR_END]), part([LKP_HDR_TARGET, LKP_HDR_RECV])])
-        .then(function (parts) {
-          return { name: src.name, sla: parts[0], lkp: parts[1] };
+      function slaPart() {
+        var loc = locate([SLA_HDR_START, SLA_HDR_END]);
+        return loc.error ? loc : fetchColumns(src.gid, loc.row, loc.cols);
+      }
+      // Kolom usulan jauh dari kolom target (AJ/W vs D/E), jadi diambil sebagai rentang
+      // sendiri (±10 KB) mulai dari baris header yang sama, lalu dicocokkan per nomor baris.
+      function lkpPart() {
+        var loc = locate([LKP_HDR_TARGET, LKP_HDR_RECV, LKP_HDR_USULAN]);
+        if (loc.error) return loc;
+        return Promise.all([
+          fetchColumns(src.gid, loc.row, [loc.cols[0], loc.cols[1]]),
+          fetchColumns(src.gid, loc.row, [loc.cols[2]])
+        ]).then(function (res) {
+          return { rows: res[0].rows, offsets: res[0].offsets, usulanRows: res[1].rows };
         });
+      }
+      return Promise.all([slaPart(), lkpPart()]).then(function (parts) {
+        return { name: src.name, sla: parts[0], lkp: parts[1] };
+      });
     });
   }
 
@@ -1093,23 +1122,43 @@
     return s;
   }
 
+  // "Agt" / "Mei" / "May" / "Sept" -> 7 / 4 / 4 / 8 (0-based). Kosong, "-", angka -> null.
+  function parseMonthName(s) {
+    var m = /^\s*([A-Za-z]{3,})/.exec(s || "");
+    if (!m) return null;
+    var k = MONTHS[m[1].slice(0, 3).toLowerCase()];
+    return k === undefined ? null : k;
+  }
+
   function aggregateLkp(sources, now) {
     var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    var docs = [], notDue = 0;
+    var docs = [], notDue = 0, noUsulan = 0;
 
     sources.forEach(function (src) {
       var head = src.rows[0] || [];
       if ((head[src.iTarget] || "").trim() !== LKP_HDR_TARGET ||
-          (head[src.iRecv] || "").trim() !== LKP_HDR_RECV) {
+          (head[src.iRecv] || "").trim() !== LKP_HDR_RECV ||
+          LKP_HDR_USULAN.indexOf(((src.usulanRows[0] || [])[0] || "").trim()) === -1) {
         throw new Error("Struktur kolom sheet " + src.name + " berubah saat dimuat - silakan muat ulang");
       }
       for (var i = 1; i < src.rows.length; i++) {
         var r = src.rows[i];
         if (!r) continue;
         var target = parseSheetDate(r[src.iTarget]);
-        if (!target || target.getFullYear() !== PERIODE) continue;
+        if (!target) continue;
+        // Baris ke-i kolom usulan = baris sheet yang sama (kedua rentang mulai dari header).
+        var usulan = parseMonthName((src.usulanRows[i] || [])[0]);
+        if (usulan === null) {
+          if (target.getFullYear() === PERIODE) noUsulan++;   // belum diusulkan - tidak dihitung
+          continue;
+        }
+        // Tahun usulan = tahun target, kecuali melewati pergantian tahun (target Des -> usulan Jan).
+        var usulanYear = target.getFullYear();
+        if (usulan < target.getMonth() - 6) usulanYear++;
+        else if (usulan > target.getMonth() + 6) usulanYear--;
+        if (usulanYear !== PERIODE) continue;
         var recv = parseSheetDate(r[src.iRecv]);
-        var doc = { src: src.name, target: target, recv: recv, lateDays: 0 };
+        var doc = { src: src.name, target: target, usulan: usulan, recv: recv, lateDays: 0 };
         if (!recv) {
           if (target >= today) { notDue++; continue; }   // target belum lewat - belum bisa dinilai
           doc.cat = "pending";
@@ -1126,12 +1175,12 @@
     });
 
     if (!docs.length) {
-      throw new Error("Tidak ada dokumen dengan target penerimaan di tahun " + PERIODE);
+      throw new Error("Tidak ada dokumen dengan bulan usulan di tahun " + PERIODE);
     }
 
     var monthMap = {};
     docs.forEach(function (d) {
-      var k = Math.max(d.target.getMonth(), LKP_BULAN_AWAL);   // Jan-Mar -> April
+      var k = Math.max(d.usulan, LKP_BULAN_AWAL);   // dikelompokkan per bulan usulan; Jan-Mar -> April
       (monthMap[k] = monthMap[k] || []).push(d);
     });
     var byMonth = Object.keys(monthMap).map(function (k) {
@@ -1147,7 +1196,7 @@
       return { label: b.label, n: n, share: late.length ? 100 * n / late.length : 0 };
     });
 
-    return { total: lkpStat(docs), byMonth: byMonth, lateBuckets: lateBuckets, notDue: notDue };
+    return { total: lkpStat(docs), byMonth: byMonth, lateBuckets: lateBuckets, notDue: notDue, noUsulan: noUsulan };
   }
 
   function fmtCount(n) { return n.toLocaleString("id-ID"); }
@@ -1214,6 +1263,10 @@
     if (data.notDue) {
       note += " " + fmtCount(data.notDue) + " dokumen belum jatuh tempo (target belum lewat) belum dinilai.";
     }
+    if (data.noUsulan) {
+      note += " " + fmtCount(data.noUsulan) + " dokumen bertarget " + PERIODE +
+        " tanpa bulan usulan (kosong atau \"-\") tidak dihitung.";
+    }
     document.getElementById("lkp-note").textContent = note;
   }
 
@@ -1235,7 +1288,8 @@
       .then(function (sources) {
         renderLkp(aggregateLkp(sources.map(function (s) {
           if (s.lkp.error) throw new Error(s.lkp.error);
-          return { name: s.name, rows: s.lkp.rows, iTarget: s.lkp.offsets[0], iRecv: s.lkp.offsets[1] };
+          return { name: s.name, rows: s.lkp.rows, iTarget: s.lkp.offsets[0], iRecv: s.lkp.offsets[1],
+            usulanRows: s.lkp.usulanRows };
         }), new Date()));
         stampNow();
         setStateLkp("ok");
