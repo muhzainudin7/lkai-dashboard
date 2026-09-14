@@ -21,6 +21,14 @@
     --track: #cde2fb;
     --err: #d03b3b;
     --warn: #e8710a;   /* oranye - sengaja jauh dari merah --err */
+    /* Donat penyebab keterlambatan SLA: satu keluarga biru, terang-gelap berselang;
+       --cause-ink-N = warna teks label di atas irisan N. 0 = belum dikategorikan. */
+    --cause-0: #b4b2aa; --cause-ink-0: #0b0b0b;
+    --cause-1: #173f75; --cause-ink-1: #ffffff;
+    --cause-2: #8db8ef; --cause-ink-2: #0b0b0b;
+    --cause-3: #3b78cc; --cause-ink-3: #ffffff;
+    --cause-4: #cfe2f9; --cause-ink-4: #0b0b0b;
+    --cause-5: #5a7fa8; --cause-ink-5: #0b0b0b;
     --hero-overlay: rgba(252, 252, 251, 0.72);
   }
   @media (prefers-color-scheme: dark) {
@@ -36,6 +44,12 @@
       --track: #104281;
       --err: #e66767;
       --warn: #f5a042;
+      --cause-0: #5f5e5a; --cause-ink-0: #ffffff;
+      --cause-1: #9cc6fa; --cause-ink-1: #0b0b0b;
+      --cause-2: #2f63b0; --cause-ink-2: #ffffff;
+      --cause-3: #5f9ae8; --cause-ink-3: #0b0b0b;
+      --cause-4: #1d3f6e; --cause-ink-4: #ffffff;
+      --cause-5: #7d93ad; --cause-ink-5: #0b0b0b;
       --hero-overlay: rgba(26, 26, 25, 0.72);
     }
   }
@@ -165,6 +179,21 @@
   .meter .seg.ok { background: var(--fill); }
   .meter .seg.late { background: var(--err); }
   .meter .seg.warn { background: var(--warn); }
+
+  /* Distribusi SLA: bar terlambat (kiri) + donat penyebab (kanan); bertumpuk di layar sempit */
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; margin-top: 12px; }
+  @media (max-width: 480px) { .split { grid-template-columns: minmax(0, 1fr); } }
+  .donut { margin: 0; }
+  .donut figcaption { font-size: 12px; font-weight: 600; color: var(--ink-2); margin: 0 0 6px; }
+  .donut svg { display: block; width: 100%; max-width: 190px; height: auto; margin: 0 auto; }
+  .donut-label { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .donut-label.sm { font-size: 10px; font-weight: 500; }
+  .donut-total { font-size: 26px; font-weight: 600; fill: var(--ink); }
+  .donut-sub { font-size: 11px; fill: var(--muted); }
+  .donut-legend { list-style: none; margin: 10px 0 0; padding: 0; font-size: 12px; }
+  .donut-legend li { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+  .donut-legend .cnt { margin-left: auto; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .donut-empty { font-size: 12px; color: var(--muted); margin: 0; }
   .row .vals { font-size: 11px; color: var(--muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
 
   /* Table */
@@ -395,7 +424,18 @@
           <span><i class="key fill"></i>Tepat SLA</span>
           <span><i class="key late"></i>Melewati SLA</span>
         </div>
-        <div id="sla-bucket"></div>
+        <div id="sla-bucket-ok"></div>
+        <div class="split">
+          <div id="sla-bucket-late"></div>
+          <figure class="donut" id="sla-cause">
+            <figcaption>Penyebab keterlambatan</figcaption>
+            <div class="donut-body">
+              <svg viewBox="0 0 200 200" role="img" aria-label="Komposisi penyebab dokumen yang melewati SLA"></svg>
+              <ul class="donut-legend"></ul>
+            </div>
+            <p class="donut-empty" hidden>Tidak ada dokumen yang melewati SLA.</p>
+          </figure>
+        </div>
       </div>
 
       <div class="card">
@@ -460,6 +500,33 @@
   ];
   var SLA_HEADER_SCAN = "A1:ZZ30";
   var SLA_HDR_START = "VIP submission", SLA_HDR_END = "SPTJP terbit";
+  var SLA_HDR_SUBID = "Submission ID";
+  // Tagihan tambahan (mis. bahan bakar) ditandai Bulan Usulan "-": dikeluarkan dari analisa SLA.
+  var SLA_USULAN_TAMBAHAN = "-";
+
+  // Penyebab keterlambatan SLA VIP per Submission ID. Sumber: Rekap_SLA.xlsx kolom "Penyebab"
+  // (diisi user, 14 Sep 2026). Dashboard tidak bisa membaca file lokal, jadi datanya ditanam
+  // di sini dan perlu diperbarui manual bila rekap berubah. Dokumen terlambat yang belum ada
+  // di daftar tampil sebagai "Belum dikategorikan".
+  var SLA_PENYEBAB = {
+    "TRE-V/4M00/20260310/0000007215": "Approval VIP",
+    "TRE-V/1020/20260612/0000101349": "Approval VIP",
+    "TRE-V/4M00/20260506/0000007619": "Approval VIP",
+    "TRE-V/4M00/20260521/0000007825": "Anggaran",
+    "TRE-V/4M00/20260525/0000007834": "Lampiran VIP",
+    "TRE-V/4M00/20260716/0000008357": "Approval VIP",
+    "TRE-V/4M00/20260814/0000008655": "Dok. AMD/BAST",
+    "TRE-V/4M00/20260606/0000007863": "Dok. AMD/BAST",
+    "TRE-V/1020/20260618/0000101806": "Approval VIP",
+    "TRE-V/1020/20260615/0000101464": "Approval VIP",
+    "TRE-V/4M00/20260717/0000008376": "Approval VIP",
+    "TRE-V/4M00/20260803/0000008573": "Approval VIP",
+    "TRE-V/4M00/20260807/0000008578": "Lampiran VIP",
+    "TRE-V/1020/20260824/0000106320": "Approval VIP"
+  };
+  // Urutan tetap -> warna tetap per penyebab (warna mengikuti penyebab, bukan peringkatnya).
+  var SLA_PENYEBAB_URUT = ["Approval VIP", "Lampiran VIP", "Dok. AMD/BAST", "Anggaran"];
+  var SLA_PENYEBAB_KOSONG = "Belum dikategorikan";
   // Bagian "Dok LKP diterima vs target" - kolom dicari dengan cara yang sama.
   var LKP_HDR_TARGET = "Target Dok Diterima Adtek", LKP_HDR_RECV = "LKP Diterima dari DAL/LOG";
   // Pengelompokan per bulan memakai BULAN USULAN (bukan bulan target). Nama header-nya beda
@@ -546,6 +613,7 @@
     "2026-05-14", // Kenaikan Isa Almasih
     "2026-05-15", // Cuti bersama Kenaikan Isa Almasih
     "2026-05-27", // Idul Adha 1447 H
+    "2026-05-28", // Cuti bersama Idul Adha (dikonfirmasi user: libur 27 & 28 Mei; cocok dengan batas SLA aplikasi VIP)
     "2026-06-01", // Hari Lahir Pancasila
     "2026-06-16", // Tahun Baru Islam 1448 H
     "2026-08-17", // HUT RI
@@ -919,7 +987,9 @@
       // (menjaga kalau sheet diubah persis di antara langkah 1 dan 2).
       var head = src.rows[0] || [];
       if ((head[src.iStart] || "").trim() !== SLA_HDR_START ||
-          (head[src.iEnd] || "").trim() !== SLA_HDR_END) {
+          (head[src.iEnd] || "").trim() !== SLA_HDR_END ||
+          LKP_HDR_USULAN.indexOf(((src.usulanRows[0] || [])[0] || "").trim()) === -1 ||
+          ((src.subRows[0] || [])[0] || "").trim() !== SLA_HDR_SUBID) {
         throw new Error("Struktur kolom sheet " + src.name + " berubah saat dimuat - silakan muat ulang");
       }
       for (var i = 1; i < src.rows.length; i++) {
@@ -927,10 +997,13 @@
         if (!r) continue;
         var start = parseSheetDate(r[src.iStart]);
         if (!start || start.getFullYear() !== PERIODE) continue;
+        // Bulan Usulan "-" = tagihan tambahan (mis. bahan bakar) -> tidak dihitung dalam SLA.
+        if (((src.usulanRows[i] || [])[0] || "").trim() === SLA_USULAN_TAMBAHAN) continue;
         var end = parseSheetDate(r[src.iEnd]);
         if (!end) { pending++; continue; }        // sudah submit, SPTJP belum terbit
         if (end < start) { invalid++; continue; } // tanggal terbalik - jangan dirata-rata
-        docs.push({ src: src.name, start: start, days: workingDaysBetween(start, end) });
+        docs.push({ src: src.name, start: start, days: workingDaysBetween(start, end),
+          subId: ((src.subRows[i] || [])[0] || "").trim() });
       }
     });
 
@@ -962,11 +1035,28 @@
       return { label: b.label, late: b.late, n: n, share: 100 * n / docs.length };
     });
 
+    // Penyebab keterlambatan (dokumen > SLA_HARI) dari data Rekap_SLA.
+    var causeMap = {};
+    docs.forEach(function (d) {
+      if (d.days <= SLA_HARI) return;
+      var c = SLA_PENYEBAB[d.subId] || SLA_PENYEBAB_KOSONG;
+      causeMap[c] = (causeMap[c] || 0) + 1;
+    });
+    var extra = 0;
+    var causes = Object.keys(causeMap).map(function (name) {
+      var idx = SLA_PENYEBAB_URUT.indexOf(name);
+      var color = name === SLA_PENYEBAB_KOSONG ? 0
+        : idx !== -1 ? idx + 1
+        : Math.min(SLA_PENYEBAB_URUT.length + 1 + extra++, 5);   // penyebab baru di luar daftar
+      return { name: name, n: causeMap[name], color: color };
+    }).sort(function (a, b) { return b.n - a.n; });
+
     return {
       total: slaStat(docs),
       bySource: bySource,
       byMonth: byMonth,
       buckets: buckets,
+      causes: causes,
       pending: pending,
       invalid: invalid
     };
@@ -990,13 +1080,17 @@
       srcEl.appendChild(row);
     });
 
-    var bucketEl = document.getElementById("sla-bucket");
-    bucketEl.textContent = "";
+    // Bar "0-3 hari" selebar kartu; bar yang terlambat di kiri dan donat penyebabnya di kanan.
+    var okEl = document.getElementById("sla-bucket-ok");
+    var lateEl = document.getElementById("sla-bucket-late");
+    okEl.textContent = "";
+    lateEl.textContent = "";
     data.buckets.forEach(function (b) {
       var row = meterRow(b.label, fmtPct(b.share), Math.max(0, Math.min(100, b.share)), b.late,
         b.n.toLocaleString("id-ID") + " dokumen");
-      bucketEl.appendChild(row);
+      (b.late ? lateEl : okEl).appendChild(row);
     });
+    renderCauseDonut(document.getElementById("sla-cause"), data.causes);
 
     var tbody = document.getElementById("sla-tbody");
     tbody.textContent = "";
@@ -1022,6 +1116,75 @@
     document.getElementById("sla-note").textContent = note;
 
     stampNow();
+  }
+
+  // Donat penyebab keterlambatan (SVG). Label persen + jumlah di dalam irisan yang cukup besar;
+  // nama penyebab ada di legenda, jadi identitas tidak bergantung pada warna saja.
+  function renderCauseDonut(root, causes) {
+    var body = root.querySelector(".donut-body");
+    var empty = root.querySelector(".donut-empty");
+    var svg = root.querySelector("svg");
+    var legend = root.querySelector(".donut-legend");
+    svg.textContent = "";
+    legend.textContent = "";
+    var total = causes.reduce(function (s, c) { return s + c.n; }, 0);
+    body.hidden = !total;
+    empty.hidden = !!total;
+    if (!total) return;
+
+    var NS = "http://www.w3.org/2000/svg", cx = 100, cy = 100, R = 92, R0 = 54;
+    function el(name, attrs) {
+      var e = document.createElementNS(NS, name);
+      Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+      return e;
+    }
+    function pt(rad, a) { return [cx + rad * Math.sin(a), cy - rad * Math.cos(a)]; }  // 0 = jam 12, searah jarum jam
+
+    var a0 = 0;
+    causes.forEach(function (c) {
+      var frac = c.n / total, a1 = a0 + frac * 2 * Math.PI, shape;
+      if (frac > 0.9999) {
+        shape = el("circle", { cx: cx, cy: cy, r: (R + R0) / 2, fill: "none",
+          style: "stroke: var(--cause-" + c.color + "); stroke-width: " + (R - R0) });
+      } else {
+        var large = a1 - a0 > Math.PI ? 1 : 0;
+        shape = el("path", {
+          d: "M" + pt(R, a0) + " A" + R + " " + R + " 0 " + large + " 1 " + pt(R, a1) +
+             " L" + pt(R0, a1) + " A" + R0 + " " + R0 + " 0 " + large + " 0 " + pt(R0, a0) + " Z",
+          style: "fill: var(--cause-" + c.color + "); stroke: var(--surface); stroke-width: 2"
+        });
+      }
+      var tip = el("title", {});
+      tip.textContent = c.name + ": " + c.n + " dokumen (" + fmtPct(100 * frac) + ")";
+      shape.appendChild(tip);
+      svg.appendChild(shape);
+
+      if (frac >= 0.1) {   // irisan kecil: angkanya cukup di legenda
+        var mid = pt((R + R0) / 2, (a0 + a1) / 2);
+        var ink = "fill: var(--cause-ink-" + c.color + ")";
+        var t1 = el("text", { x: mid[0], y: mid[1] - 2, "text-anchor": "middle", "class": "donut-label", style: ink });
+        t1.textContent = fmtPct(100 * frac);
+        var t2 = el("text", { x: mid[0], y: mid[1] + 10, "text-anchor": "middle", "class": "donut-label sm", style: ink });
+        t2.textContent = "(" + c.n + ")";
+        svg.appendChild(t1);
+        svg.appendChild(t2);
+      }
+
+      var li = document.createElement("li");
+      li.innerHTML = '<i class="key"></i><span class="nm"></span><span class="cnt"></span>';
+      li.querySelector(".key").style.background = "var(--cause-" + c.color + ")";
+      li.querySelector(".nm").textContent = c.name;
+      li.querySelector(".cnt").textContent = c.n + " · " + fmtPct(100 * frac);
+      legend.appendChild(li);
+      a0 = a1;
+    });
+
+    var totalText = el("text", { x: cx, y: cy + 4, "text-anchor": "middle", "class": "donut-total" });
+    totalText.textContent = total;
+    var subText = el("text", { x: cx, y: cy + 20, "text-anchor": "middle", "class": "donut-sub" });
+    subText.textContent = "terlambat";
+    svg.appendChild(totalText);
+    svg.appendChild(subText);
   }
 
   // Nomor kolom 0-based -> huruf kolom sheet (0 -> A, 25 -> Z, 26 -> AA, 73 -> BV).
@@ -1079,18 +1242,31 @@
         }
         return loc;
       }
-      function slaPart() {
-        var loc = locate([SLA_HDR_START, SLA_HDR_END]);
-        return loc.error ? loc : fetchColumns(src.gid, loc.row, loc.cols);
+      // Kolom yang letaknya jauh (usulan AJ/W, Submission ID AA/AC) diambil sebagai rentang
+      // satu kolom mulai dari baris header yang sama, lalu dicocokkan per nomor baris.
+      // Kolom yang sama cukup diunduh sekali untuk kedua tab.
+      var colCache = {};
+      function fetchCol(row, col) {
+        var key = row + ":" + col;
+        return colCache[key] || (colCache[key] = fetchColumns(src.gid, row, [col]));
       }
-      // Kolom usulan jauh dari kolom target (AJ/W vs D/E), jadi diambil sebagai rentang
-      // sendiri (±10 KB) mulai dari baris header yang sama, lalu dicocokkan per nomor baris.
+      function slaPart() {
+        var loc = locate([SLA_HDR_START, SLA_HDR_END, LKP_HDR_USULAN, SLA_HDR_SUBID]);
+        if (loc.error) return loc;
+        return Promise.all([
+          fetchColumns(src.gid, loc.row, [loc.cols[0], loc.cols[1]]),
+          fetchCol(loc.row, loc.cols[2]),
+          fetchCol(loc.row, loc.cols[3])
+        ]).then(function (res) {
+          return { rows: res[0].rows, offsets: res[0].offsets, usulanRows: res[1].rows, subRows: res[2].rows };
+        });
+      }
       function lkpPart() {
         var loc = locate([LKP_HDR_TARGET, LKP_HDR_RECV, LKP_HDR_USULAN]);
         if (loc.error) return loc;
         return Promise.all([
           fetchColumns(src.gid, loc.row, [loc.cols[0], loc.cols[1]]),
-          fetchColumns(src.gid, loc.row, [loc.cols[2]])
+          fetchCol(loc.row, loc.cols[2])
         ]).then(function (res) {
           return { rows: res[0].rows, offsets: res[0].offsets, usulanRows: res[1].rows };
         });
@@ -1132,7 +1308,7 @@
 
   function aggregateLkp(sources, now) {
     var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    var docs = [], notDue = 0, noUsulan = 0;
+    var docs = [], notDue = 0;
 
     sources.forEach(function (src) {
       var head = src.rows[0] || [];
@@ -1148,10 +1324,7 @@
         if (!target) continue;
         // Baris ke-i kolom usulan = baris sheet yang sama (kedua rentang mulai dari header).
         var usulan = parseMonthName((src.usulanRows[i] || [])[0]);
-        if (usulan === null) {
-          if (target.getFullYear() === PERIODE) noUsulan++;   // belum diusulkan - tidak dihitung
-          continue;
-        }
+        if (usulan === null) continue;   // belum diusulkan - tidak dihitung
         // Tahun usulan = tahun target, kecuali melewati pergantian tahun (target Des -> usulan Jan).
         var usulanYear = target.getFullYear();
         if (usulan < target.getMonth() - 6) usulanYear++;
@@ -1196,7 +1369,7 @@
       return { label: b.label, n: n, share: late.length ? 100 * n / late.length : 0 };
     });
 
-    return { total: lkpStat(docs), byMonth: byMonth, lateBuckets: lateBuckets, notDue: notDue, noUsulan: noUsulan };
+    return { total: lkpStat(docs), byMonth: byMonth, lateBuckets: lateBuckets, notDue: notDue };
   }
 
   function fmtCount(n) { return n.toLocaleString("id-ID"); }
@@ -1263,10 +1436,6 @@
     if (data.notDue) {
       note += " " + fmtCount(data.notDue) + " dokumen belum jatuh tempo (target belum lewat) belum dinilai.";
     }
-    if (data.noUsulan) {
-      note += " " + fmtCount(data.noUsulan) + " dokumen bertarget " + PERIODE +
-        " tanpa bulan usulan (kosong atau \"-\") tidak dihitung.";
-    }
     document.getElementById("lkp-note").textContent = note;
   }
 
@@ -1306,7 +1475,8 @@
       .then(function (sources) {
         renderSla(aggregateSla(sources.map(function (s) {
           if (s.sla.error) throw new Error(s.sla.error);
-          return { name: s.name, rows: s.sla.rows, iStart: s.sla.offsets[0], iEnd: s.sla.offsets[1] };
+          return { name: s.name, rows: s.sla.rows, iStart: s.sla.offsets[0], iEnd: s.sla.offsets[1],
+            usulanRows: s.sla.usulanRows, subRows: s.sla.subRows };
         })));
         setStateSla("ok");
       })
