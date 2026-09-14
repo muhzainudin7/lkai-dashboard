@@ -355,16 +355,19 @@
   var HISTORY_CSV =
     "https://docs.google.com/spreadsheets/d/1cZzH3M6-VN1l3iKxuRtL-PHlKbYdCOiFNqGCPgBYP2w/export?format=csv&gid=1084186449&range=H3:L3000";
 
-  // Sheet "Rekapitulasi Tagihan": header di baris 17, data mulai baris 18.
-  // Range diambil MULAI baris 17 supaya baris pertama bisa dipakai sebagai
-  // pemeriksa struktur - kalau kolom digeser, kita gagal keras, bukan diam-diam
-  // menghitung nol. Ambil per-range (bukan sheet penuh): ±90 KB, bukan 2,8 MB.
+  // Sheet "Rekapitulasi Tagihan". Posisi kolom SENGAJA tidak dikunci: pemilik
+  // sheet pernah menyisipkan kolom (Sep 2026) sehingga Unit BS/BV bergeser ke
+  // BV/BY dan Pusat BC/BF ke BI/BL. Maka per sheet dilakukan 2 langkah:
+  //   1) ambil area header A1:ZZ30 (±8 KB), cari baris & kolom berteks
+  //      "VIP submission" dan "SPTJP terbit";
+  //   2) ambil hanya rentang kolom itu, mulai dari baris header (±40 KB).
+  // Header tidak ditemukan -> tampil error, bukan diam-diam menghitung nol.
   var SLA_SHEET_ID = "1YGe8t37hEcNnPdr8ChitJqfHhX0DG-Gd_p8Mc8lJgxc";
   var SLA_SOURCES = [
-    { name: "Unit",  gid: "25189397",  range: "BS17:BW20000" },  // BS=VIP submission, BV=SPTJP terbit
-    { name: "Pusat", gid: "611486759", range: "BC17:BG20000" }   // BC=VIP submission, BF=SPTJP terbit
+    { name: "Unit",  gid: "25189397" },
+    { name: "Pusat", gid: "611486759" }
   ];
-  var SLA_COL_START = 0, SLA_COL_END = 3;   // offset relatif sama di kedua sheet
+  var SLA_HEADER_SCAN = "A1:ZZ30";
   var SLA_HDR_START = "VIP submission", SLA_HDR_END = "SPTJP terbit";
 
   var PERIODE = 2026;   // hanya dokumen dengan VIP submission di tahun ini
@@ -810,18 +813,19 @@
     var docs = [], pending = 0, invalid = 0;
 
     sources.forEach(function (src) {
+      // Pemeriksa kedua: baris pertama data yang diambil harus tetap header yang dicari
+      // (menjaga kalau sheet diubah persis di antara langkah 1 dan 2).
       var head = src.rows[0] || [];
-      if ((head[SLA_COL_START] || "").trim() !== SLA_HDR_START ||
-          (head[SLA_COL_END] || "").trim() !== SLA_HDR_END) {
-        throw new Error("Struktur kolom sheet " + src.name + " berubah - " +
-          '"' + SLA_HDR_START + '" / "' + SLA_HDR_END + '" tidak ada di posisi yang diharapkan');
+      if ((head[src.iStart] || "").trim() !== SLA_HDR_START ||
+          (head[src.iEnd] || "").trim() !== SLA_HDR_END) {
+        throw new Error("Struktur kolom sheet " + src.name + " berubah saat dimuat - silakan muat ulang");
       }
       for (var i = 1; i < src.rows.length; i++) {
         var r = src.rows[i];
         if (!r) continue;
-        var start = parseSheetDate(r[SLA_COL_START]);
+        var start = parseSheetDate(r[src.iStart]);
         if (!start || start.getFullYear() !== PERIODE) continue;
-        var end = parseSheetDate(r[SLA_COL_END]);
+        var end = parseSheetDate(r[src.iEnd]);
         if (!end) { pending++; continue; }        // sudah submit, SPTJP belum terbit
         if (end < start) { invalid++; continue; } // tanggal terbalik - jangan dirata-rata
         docs.push({ src: src.name, start: start, days: workingDaysBetween(start, end) });
@@ -918,13 +922,43 @@
     stampNow();
   }
 
+  // Nomor kolom 0-based -> huruf kolom sheet (0 -> A, 25 -> Z, 26 -> AA, 73 -> BV).
+  function colLetter(i) {
+    var s = "";
+    for (i = i + 1; i > 0; i = Math.floor((i - 1) / 26)) {
+      s = String.fromCharCode(65 + (i - 1) % 26) + s;
+    }
+    return s;
+  }
+
+  function slaExportUrl(gid, range) {
+    return "https://docs.google.com/spreadsheets/d/" + SLA_SHEET_ID +
+      "/export?format=csv&gid=" + gid + "&range=" + range;
+  }
+
+  // Langkah 1: cari baris header & kolom "VIP submission" / "SPTJP terbit".
+  // Langkah 2: ambil hanya rentang kolom tersebut, mulai dari baris header.
+  function fetchSlaSource(src) {
+    return fetchCsv(slaExportUrl(src.gid, SLA_HEADER_SCAN))
+      .then(function (scan) {
+        for (var r = 0; r < scan.length; r++) {
+          var cStart = findColumn(scan[r] || [], SLA_HDR_START);
+          var cEnd = findColumn(scan[r] || [], SLA_HDR_END);
+          if (cStart === -1 || cEnd === -1) continue;
+          var lo = Math.min(cStart, cEnd), hi = Math.max(cStart, cEnd);
+          var range = colLetter(lo) + (r + 1) + ":" + colLetter(hi) + "20000";
+          return fetchCsv(slaExportUrl(src.gid, range)).then(function (rows) {
+            return { name: src.name, rows: rows, iStart: cStart - lo, iEnd: cEnd - lo };
+          });
+        }
+        throw new Error("Struktur kolom sheet " + src.name + " berubah - " +
+          '"' + SLA_HDR_START + '" / "' + SLA_HDR_END + '" tidak ditemukan');
+      });
+  }
+
   function loadSla() {
     setStateSla("loading");
-    Promise.all(SLA_SOURCES.map(function (src) {
-      return fetchCsv("https://docs.google.com/spreadsheets/d/" + SLA_SHEET_ID +
-        "/export?format=csv&gid=" + src.gid + "&range=" + src.range)
-        .then(function (rows) { return { name: src.name, rows: rows }; });
-    }))
+    Promise.all(SLA_SOURCES.map(function (src) { return fetchSlaSource(src); }))
       .then(function (sources) {
         renderSla(aggregateSla(sources));
         setStateSla("ok");
