@@ -600,10 +600,16 @@
   //   hari     : SLA dalam hari kerja
   //   strip    : true = baris yang tanggalnya berisi "-" dikeluarkan dari analisa
   //   penyebab : true = tampilkan donat penyebab keterlambatan (butuh kolom Submission ID)
+  //   buckets  : kelompok "Distribusi Lama Proses" khusus proses ini (tanpa ini: BUCKETS bawaan)
   var PROSES = {
     bapp: { judul: "BAPP", grup: "BAPP", hdr: ["Submit", "Terbit"], hari: 4,
             juknis: "Juknis Dokumen Digital 0010.I/DIR/2023", penyebab: false, strip: true,
-            mulai: "BAPP submit", selesai: "BAPP terbit", belum: "BAPP belum terbit" },
+            mulai: "BAPP submit", selesai: "BAPP terbit", belum: "BAPP belum terbit",
+            buckets: [
+              { label: "0-4 hari",          min: 0, max: 4 },
+              { label: "5-7 hari",          min: 5, max: 7 },
+              { label: "lebih dari 7 hari", min: 8, max: Infinity }
+            ] },
     bap:  { judul: "BAP", grup: "BAP", hdr: ["Submit", "Terbit"], hari: 3,
             juknis: "Juknis Dokumen Digital 0010.I/DIR/2023", penyebab: false, strip: true,
             mulai: "BAP submit", selesai: "BAP terbit", belum: "BAP belum terbit" },
@@ -1037,7 +1043,8 @@
      (tab Penerimaan LKP ada di bawah, setelah renderSla)
      ===================================================================== */
 
-  // Kelompok lama proses (hari kerja), sama untuk semua proses: 0-3, 4-5, lebih dari 5.
+  // Kelompok lama proses (hari kerja) bawaan untuk BAP & VIP: 0-3, 4-5, lebih dari 5.
+  // BAPP memakai kelompoknya sendiri (PROSES.bapp.buckets: 0-4, 5-7, lebih dari 7).
   var BUCKETS = [
     { label: "0-3 hari",          min: 0, max: 3 },
     { label: "4-5 hari",          min: 4, max: 5 },
@@ -1106,7 +1113,7 @@
 
     // Kelompok yang melewati batas SLA berwarna merah. Bila batas SLA jatuh di dalam kelompok
     // (BAPP: 4 hari ada di kelompok 4-5), jumlah yang masih tepat SLA dicatat untuk keterangan.
-    var buckets = BUCKETS.map(function (b) {
+    var buckets = (cfg.buckets || BUCKETS).map(function (b) {
       var inBucket = docs.filter(function (d) { return d.days >= b.min && d.days <= b.max; });
       var late = b.max > cfg.hari;
       return {
