@@ -21,14 +21,15 @@
     --track: #cde2fb;
     --err: #d03b3b;
     --warn: #e8710a;   /* oranye - sengaja jauh dari merah --err */
-    /* Donat penyebab keterlambatan SLA: satu keluarga biru, terang-gelap berselang;
-       --cause-ink-N = warna teks label di atas irisan N. 0 = belum dikategorikan. */
+    /* Donat penyebab keterlambatan SLA: gradasi merah (selaras bar "Melewati SLA" --err),
+       terang-gelap berselang; --cause-ink-N = warna teks label di atas irisan N.
+       0 = belum dikategorikan (abu). */
     --cause-0: #b4b2aa; --cause-ink-0: #0b0b0b;
-    --cause-1: #173f75; --cause-ink-1: #ffffff;
-    --cause-2: #8db8ef; --cause-ink-2: #0b0b0b;
-    --cause-3: #3b78cc; --cause-ink-3: #ffffff;
-    --cause-4: #cfe2f9; --cause-ink-4: #0b0b0b;
-    --cause-5: #5a7fa8; --cause-ink-5: #0b0b0b;
+    --cause-1: #8e1f1f; --cause-ink-1: #ffffff;
+    --cause-2: #f0a3a3; --cause-ink-2: #0b0b0b;
+    --cause-3: #d03b3b; --cause-ink-3: #ffffff;
+    --cause-4: #fad4d4; --cause-ink-4: #0b0b0b;
+    --cause-5: #b65454; --cause-ink-5: #ffffff;
     --hero-overlay: rgba(252, 252, 251, 0.72);
   }
   @media (prefers-color-scheme: dark) {
@@ -45,11 +46,11 @@
       --err: #e66767;
       --warn: #f5a042;
       --cause-0: #5f5e5a; --cause-ink-0: #ffffff;
-      --cause-1: #9cc6fa; --cause-ink-1: #0b0b0b;
-      --cause-2: #2f63b0; --cause-ink-2: #ffffff;
-      --cause-3: #5f9ae8; --cause-ink-3: #0b0b0b;
-      --cause-4: #1d3f6e; --cause-ink-4: #ffffff;
-      --cause-5: #7d93ad; --cause-ink-5: #0b0b0b;
+      --cause-1: #f4a6a6; --cause-ink-1: #0b0b0b;
+      --cause-2: #b83232; --cause-ink-2: #ffffff;
+      --cause-3: #e66767; --cause-ink-3: #0b0b0b;
+      --cause-4: #7a1f1f; --cause-ink-4: #ffffff;
+      --cause-5: #c98a8a; --cause-ink-5: #0b0b0b;
       --hero-overlay: rgba(26, 26, 25, 0.72);
     }
   }
@@ -241,6 +242,11 @@
   }
   .btn-link:focus-visible { outline: 2px solid var(--fill); outline-offset: 2px; }
 
+  /* Judul kartu + tombol link di kanan; tombol turun ke bawah bila layar sempit */
+  .card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin: 0 0 2px; }
+  .card-head h2 { margin: 0; }
+  .btn-ext { font-size: 12px; padding: 7px 10px; }
+
   footer { font-size: 11px; color: var(--muted); }
   [hidden] { display: none !important; }
 </style>
@@ -278,12 +284,12 @@
         <div class="stat">
           <p class="label">Total OPK 1</p>
           <div class="big" data-f="hero-opk1-pct"></div>
-          <div class="ctx"><b data-f="hero-opk1-real"></b> dari <b data-f="hero-opk1-target"></b></div>
+          <div class="ctx"><b data-f="hero-opk1-real"></b> dari<br><b data-f="hero-opk1-target"></b></div>
         </div>
         <div class="stat">
           <p class="label">Total OPK 2</p>
           <div class="big" data-f="hero-opk2-pct"></div>
-          <div class="ctx"><b data-f="hero-opk2-real"></b> dari <b data-f="hero-opk2-target"></b></div>
+          <div class="ctx"><b data-f="hero-opk2-real"></b> dari<br><b data-f="hero-opk2-target"></b></div>
         </div>
       </div>
 
@@ -298,7 +304,11 @@
       </div>
 
       <div class="card">
-        <h2>Tabel Rekap</h2>
+        <div class="card-head">
+          <h2>Tabel Rekap</h2>
+          <a class="btn-link btn-ext" href="https://drive.google.com/file/d/1NqEJ49DCvwGHRIOWpxGUR7QxRorsg32B/view?usp=sharing"
+             target="_blank" rel="noopener" title="Buka di Google Drive">Target AKI OPK 2 - Agustus 2026 <span aria-hidden="true">&#8599;</span></a>
+        </div>
         <p class="sub">Nilai dalam Miliar Rupiah</p>
         <div class="tbl-scroll">
           <table>
@@ -343,12 +353,12 @@
       <div class="card hero">
         <img class="logo" src="logo-PLN.png" alt="PLN">
         <div class="stat">
-          <p class="label">Sesuai Target</p>
+          <p class="label">Tepat Waktu</p>
           <div class="big" id="lkp-hero-pct"></div>
           <div class="ctx"><b id="lkp-hero-ok"></b> dari <b id="lkp-hero-n"></b> dokumen</div>
         </div>
         <div class="stat">
-          <p class="label">Tidak Sesuai</p>
+          <p class="label">Terlambat</p>
           <div class="big" id="lkp-hero-miss"></div>
           <div class="ctx"><b id="lkp-hero-late"></b> terlambat &middot; <b id="lkp-hero-pending"></b> belum diterima</div>
         </div>
@@ -429,7 +439,7 @@
         <div class="stat">
           <p class="label">Rata-rata Proses</p>
           <div class="big" id="sla-hero-avg"></div>
-          <div class="ctx">Target SLA <b id="sla-hero-target"></b></div>
+          <div class="ctx">SLA <b id="sla-hero-target"></b><br>Juknis Sentralisasi Pembayaran Thn 2022</div>
         </div>
       </div>
 
@@ -1106,7 +1116,7 @@
     document.getElementById("sla-hero-ok").textContent = data.total.ok.toLocaleString("id-ID");
     document.getElementById("sla-hero-n").textContent = data.total.n.toLocaleString("id-ID");
     document.getElementById("sla-hero-avg").textContent = fmtDays(data.total.avg);
-    document.getElementById("sla-hero-target").textContent = "maks " + SLA_HARI + " hari kerja";
+    document.getElementById("sla-hero-target").textContent = SLA_HARI + " hari kerja";
 
     var srcEl = document.getElementById("sla-source");
     srcEl.textContent = "";
@@ -1345,6 +1355,8 @@
 
   function aggregateLkp(sources, now) {
     var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // Hanya sampai bulan berjalan saat data dimuat: usulan bulan-bulan depan belum ditampilkan.
+    var batasBulan = now.getFullYear() > PERIODE ? 11 : now.getMonth();
     var docs = [], notDue = 0;
 
     sources.forEach(function (src) {
@@ -1367,6 +1379,7 @@
         if (usulan < target.getMonth() - 6) usulanYear++;
         else if (usulan > target.getMonth() + 6) usulanYear--;
         if (usulanYear !== PERIODE) continue;
+        if (usulan > batasBulan) continue;
         var recv = parseSheetDate(r[src.iRecv]);
         var doc = { src: src.name, target: target, usulan: usulan, recv: recv, lateDays: 0 };
         if (!recv) {
