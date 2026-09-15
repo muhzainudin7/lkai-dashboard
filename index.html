@@ -185,6 +185,7 @@
   /* Distribusi SLA: bar terlambat (kiri) + donat penyebab (kanan); bertumpuk di layar sempit */
   .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; margin-top: 12px; }
   @media (max-width: 480px) { .split { grid-template-columns: minmax(0, 1fr); } }
+  .split.no-donut { grid-template-columns: minmax(0, 1fr); }   /* tab BAPP/BAP: tanpa donat penyebab */
   .donut { margin: 0; }
   .donut figcaption { font-size: 12px; font-weight: 600; color: var(--ink-2); margin: 0 0 6px; }
   .donut svg { display: block; width: 100%; max-width: 190px; height: auto; margin: 0 auto; }
@@ -264,10 +265,12 @@
   </header>
 
   <div class="tabs" role="tablist">
-    <button id="tab-aki" type="button" role="tab" aria-selected="true" aria-controls="view-aki">AKI 2026</button>
-    <button id="tab-aki-um" type="button" role="tab" aria-selected="false" aria-controls="view-aki-um">AKI 2026 Exc UM</button>
-    <button id="tab-lkp" type="button" role="tab" aria-selected="false" aria-controls="view-lkp">Penerimaan LKP</button>
-    <button id="tab-sla" type="button" role="tab" aria-selected="false" aria-controls="view-sla">SLA VIP</button>
+    <button id="tab-aki" type="button" role="tab" aria-selected="true" aria-controls="view-aki">AKI</button>
+    <button id="tab-aki-um" type="button" role="tab" aria-selected="false" aria-controls="view-aki-um">AKI Exc UM</button>
+    <button id="tab-lkp" type="button" role="tab" aria-selected="false" aria-controls="view-lkp">LKP</button>
+    <button id="tab-bapp" type="button" role="tab" aria-selected="false" aria-controls="view-bapp">BAPP</button>
+    <button id="tab-bap" type="button" role="tab" aria-selected="false" aria-controls="view-bap">BAP</button>
+    <button id="tab-sla" type="button" role="tab" aria-selected="false" aria-controls="view-sla">VIP</button>
   </div>
 
   <!-- ================= Tab 1: Realisasi vs Target AKI =================
@@ -422,25 +425,28 @@
     </div>
   </section>
 
-  <!-- ================= Tab 4: SLA Proses VIP ================= -->
+  <!-- ================= Tab SLA per proses: BAPP, BAP, VIP =================
+       Section ini cetakan untuk ketiga tab SLA: script menyalinnya (cloneNode) menjadi
+       #view-bapp & #view-bap, karena itu elemen isi memakai data-f, bukan id.
+       Teks khusus proses (SLA, juknis, alur) diisi dari konstanta PROSES di script. -->
   <section class="view" id="view-sla" role="tabpanel" aria-labelledby="tab-sla" hidden>
-    <div class="card status" id="sla-status">
+    <div class="card status" data-f="status">
       <div class="spin"></div>
       <div class="msg">Mengambil data terbaru dari Google Sheets&hellip;</div>
     </div>
 
-    <div class="view" id="sla-content" hidden>
+    <div class="view" data-f="content" hidden>
       <div class="card hero">
         <img class="logo" src="logo-PLN.png" alt="PLN">
         <div class="stat">
           <p class="label">Tepat SLA</p>
-          <div class="big" id="sla-hero-pct"></div>
-          <div class="ctx"><b id="sla-hero-ok"></b> dari <b id="sla-hero-n"></b> dokumen</div>
+          <div class="big" data-f="hero-pct"></div>
+          <div class="ctx"><b data-f="hero-ok"></b> dari <b data-f="hero-n"></b> dokumen</div>
         </div>
         <div class="stat">
           <p class="label">Rata-rata Proses</p>
-          <div class="big" id="sla-hero-avg"></div>
-          <div class="ctx">SLA <b id="sla-hero-target"></b><br>Juknis Sentralisasi Pembayaran Thn 2022</div>
+          <div class="big" data-f="hero-avg"></div>
+          <div class="ctx">SLA <b data-f="sla-hari"></b><br><span data-f="sla-juknis"></span></div>
         </div>
       </div>
 
@@ -451,20 +457,20 @@
           <span><i class="key fill"></i>Tepat SLA</span>
           <span><i class="key track"></i>Melewati SLA</span>
         </div>
-        <div id="sla-source"></div>
+        <div data-f="source"></div>
       </div>
 
       <div class="card">
         <h2>Distribusi Lama Proses</h2>
-        <p class="sub">VIP submission &rarr; SPTJP terbit, dalam hari kerja</p>
+        <p class="sub" data-f="dist-sub"></p>
         <div class="legend">
           <span><i class="key fill"></i>Tepat SLA</span>
           <span><i class="key late"></i>Melewati SLA</span>
         </div>
-        <div id="sla-bucket-ok"></div>
-        <div class="split">
-          <div id="sla-bucket-late"></div>
-          <figure class="donut" id="sla-cause">
+        <div data-f="bucket-ok"></div>
+        <div class="split" data-f="split">
+          <div data-f="bucket-late"></div>
+          <figure class="donut" data-f="cause">
             <figcaption>Penyebab keterlambatan</figcaption>
             <div class="donut-body">
               <svg viewBox="0 0 200 200" role="img" aria-label="Komposisi penyebab dokumen yang melewati SLA"></svg>
@@ -477,7 +483,7 @@
 
       <div class="card">
         <h2>Rekap per Bulan</h2>
-        <p class="sub">Dikelompokkan menurut bulan VIP submission</p>
+        <p class="sub" data-f="month-sub"></p>
         <div class="tbl-scroll">
           <table>
             <thead>
@@ -489,10 +495,10 @@
                 <th>%</th>
               </tr>
             </thead>
-            <tbody id="sla-tbody"></tbody>
+            <tbody data-f="tbody"></tbody>
           </table>
         </div>
-        <p class="unit-note" id="sla-note"></p>
+        <p class="unit-note" data-f="note"></p>
       </div>
 
       <footer>
@@ -586,8 +592,25 @@
   // bulan, bulan usulan Jan-Mar digabung ke April.
   var LKP_BULAN_AWAL = 3;   // 0 = Januari, 3 = April
 
-  var PERIODE = 2026;   // hanya dokumen dengan VIP submission di tahun ini
-  var SLA_HARI = 3;     // SLA: maksimal 3 hari kerja
+  var PERIODE = 2026;   // hanya dokumen yang tanggal mulai prosesnya (submit) di tahun ini
+
+  // Tab SLA per proses. Satu cetakan tampilan (section VIP) dipakai ketiganya.
+  //   grup     : label grup di baris atas header ("BAPP"/"BAP"); null = header tunggal (VIP)
+  //   hdr      : teks header tanggal mulai & tanggal selesai
+  //   hari     : SLA dalam hari kerja
+  //   strip    : true = baris yang tanggalnya berisi "-" dikeluarkan dari analisa
+  //   penyebab : true = tampilkan donat penyebab keterlambatan (butuh kolom Submission ID)
+  var PROSES = {
+    bapp: { judul: "BAPP", grup: "BAPP", hdr: ["Submit", "Terbit"], hari: 4,
+            juknis: "Juknis Dokumen Digital 0010.I/DIR/2023", penyebab: false, strip: true,
+            mulai: "BAPP submit", selesai: "BAPP terbit", belum: "BAPP belum terbit" },
+    bap:  { judul: "BAP", grup: "BAP", hdr: ["Submit", "Terbit"], hari: 3,
+            juknis: "Juknis Dokumen Digital 0010.I/DIR/2023", penyebab: false, strip: true,
+            mulai: "BAP submit", selesai: "BAP terbit", belum: "BAP belum terbit" },
+    sla:  { judul: "VIP", grup: null, hdr: [SLA_HDR_START, SLA_HDR_END], hari: 3,
+            juknis: "Juknis Sentralisasi Pembayaran Thn 2022", penyebab: true, strip: false,
+            mulai: "VIP submission", selesai: "SPTJP terbit", belum: "SPTJP belum terbit" }
+  };
 
   /* ---------------------------------------------------------------------
      Hari libur nasional + cuti bersama (SKB 3 Menteri).
@@ -1010,58 +1033,61 @@
   }
 
   /* =====================================================================
-     Tab SLA Proses VIP
+     Tab SLA per proses: BAPP, BAP, VIP (konfigurasi di PROSES)
      (tab Penerimaan LKP ada di bawah, setelah renderSla)
      ===================================================================== */
 
+  // Kelompok lama proses (hari kerja), sama untuk semua proses: 0-3, 4-5, lebih dari 5.
   var BUCKETS = [
-    { label: "0-3 hari (tepat SLA)", late: false, test: function (d) { return d <= 3; } },
-    { label: "4-5 hari",             late: true,  test: function (d) { return d >= 4 && d <= 5; } },
-    { label: "6-7 hari",             late: true,  test: function (d) { return d >= 6 && d <= 7; } },
-    { label: "lebih dari 7 hari",    late: true,  test: function (d) { return d > 7; } }
+    { label: "0-3 hari",          min: 0, max: 3 },
+    { label: "4-5 hari",          min: 4, max: 5 },
+    { label: "lebih dari 5 hari", min: 6, max: Infinity }
   ];
 
-  function slaStat(list) {
+  function slaStat(list, hari) {
     var n = list.length, ok = 0, sum = 0;
-    list.forEach(function (d) { sum += d.days; if (d.days <= SLA_HARI) ok++; });
+    list.forEach(function (d) { sum += d.days; if (d.days <= hari) ok++; });
     return { n: n, ok: ok, avg: n ? sum / n : 0, pct: n ? 100 * ok / n : 0 };
   }
 
-  function aggregateSla(sources) {
+  function aggregateSla(sources, cfg) {
     var docs = [], pending = 0, invalid = 0;
 
     sources.forEach(function (src) {
       // Pemeriksa kedua: baris pertama data yang diambil harus tetap header yang dicari
       // (menjaga kalau sheet diubah persis di antara langkah 1 dan 2).
       var head = src.rows[0] || [];
-      if ((head[src.iStart] || "").trim() !== SLA_HDR_START ||
-          (head[src.iEnd] || "").trim() !== SLA_HDR_END ||
+      if ((head[src.iStart] || "").trim() !== cfg.hdr[0] ||
+          (head[src.iEnd] || "").trim() !== cfg.hdr[1] ||
           LKP_HDR_USULAN.indexOf(((src.usulanRows[0] || [])[0] || "").trim()) === -1 ||
-          ((src.subRows[0] || [])[0] || "").trim() !== SLA_HDR_SUBID) {
+          (cfg.penyebab && ((src.subRows[0] || [])[0] || "").trim() !== SLA_HDR_SUBID)) {
         throw new Error("Struktur kolom sheet " + src.name + " berubah saat dimuat - silakan muat ulang");
       }
       for (var i = 1; i < src.rows.length; i++) {
         var r = src.rows[i];
         if (!r) continue;
-        var start = parseSheetDate(r[src.iStart]);
+        var rawStart = (r[src.iStart] || "").trim(), rawEnd = (r[src.iEnd] || "").trim();
+        // Tanggal berisi "-" -> dikeluarkan dari analisa (BAPP/BAP).
+        if (cfg.strip && (rawStart === "-" || rawEnd === "-")) continue;
+        var start = parseSheetDate(rawStart);
         if (!start || start.getFullYear() !== PERIODE) continue;
         // Bulan Usulan "-" = tagihan tambahan (mis. bahan bakar) -> tidak dihitung dalam SLA.
         if (((src.usulanRows[i] || [])[0] || "").trim() === SLA_USULAN_TAMBAHAN) continue;
-        var end = parseSheetDate(r[src.iEnd]);
-        if (!end) { pending++; continue; }        // sudah submit, SPTJP belum terbit
+        var end = parseSheetDate(rawEnd);
+        if (!end) { pending++; continue; }        // sudah submit, belum terbit
         if (end < start) { invalid++; continue; } // tanggal terbalik - jangan dirata-rata
         docs.push({ src: src.name, start: start, days: workingDaysBetween(start, end),
-          subId: ((src.subRows[i] || [])[0] || "").trim() });
+          subId: cfg.penyebab ? ((src.subRows[i] || [])[0] || "").trim() : "" });
       }
     });
 
     if (!docs.length) {
-      throw new Error("Tidak ada dokumen dengan VIP submission & SPTJP terbit di tahun " + PERIODE);
+      throw new Error("Tidak ada dokumen " + cfg.judul + " yang sudah terbit di tahun " + PERIODE);
     }
 
     var bySource = sources.map(function (src) {
       var list = docs.filter(function (d) { return d.src === src.name; });
-      var s = slaStat(list);
+      var s = slaStat(list, cfg.hari);
       s.name = src.name;
       return s;
     }).filter(function (s) { return s.n > 0; });
@@ -1072,35 +1098,47 @@
       (monthMap[k] = monthMap[k] || []).push(d);
     });
     var byMonth = Object.keys(monthMap).map(function (k) {
-      var s = slaStat(monthMap[k]);
+      var s = slaStat(monthMap[k], cfg.hari);
       s.name = MONTH_ID[k] + " " + PERIODE;
       s.order = parseInt(k, 10);
       return s;
     }).sort(function (a, b) { return a.order - b.order; });
 
+    // Kelompok yang melewati batas SLA berwarna merah. Bila batas SLA jatuh di dalam kelompok
+    // (BAPP: 4 hari ada di kelompok 4-5), jumlah yang masih tepat SLA dicatat untuk keterangan.
     var buckets = BUCKETS.map(function (b) {
-      var n = docs.filter(function (d) { return b.test(d.days); }).length;
-      return { label: b.label, late: b.late, n: n, share: 100 * n / docs.length };
+      var inBucket = docs.filter(function (d) { return d.days >= b.min && d.days <= b.max; });
+      var late = b.max > cfg.hari;
+      return {
+        label: b.label + (b.max === cfg.hari ? " (tepat SLA)" : ""),
+        late: late,
+        n: inBucket.length,
+        okInside: late ? inBucket.filter(function (d) { return d.days <= cfg.hari; }).length : 0,
+        share: 100 * inBucket.length / docs.length
+      };
     });
 
-    // Penyebab keterlambatan (dokumen > SLA_HARI) dari data Rekap_SLA.
-    var causeMap = {};
-    docs.forEach(function (d) {
-      if (d.days <= SLA_HARI) return;
-      var c = SLA_PENYEBAB[d.subId] || SLA_PENYEBAB_KOSONG;
-      causeMap[c] = (causeMap[c] || 0) + 1;
-    });
-    var extra = 0;
-    var causes = Object.keys(causeMap).map(function (name) {
-      var idx = SLA_PENYEBAB_URUT.indexOf(name);
-      var color = name === SLA_PENYEBAB_KOSONG ? 0
-        : idx !== -1 ? idx + 1
-        : Math.min(SLA_PENYEBAB_URUT.length + 1 + extra++, 5);   // penyebab baru di luar daftar
-      return { name: name, n: causeMap[name], color: color };
-    }).sort(function (a, b) { return b.n - a.n; });
+    // Penyebab keterlambatan (dokumen melewati SLA) dari data Rekap_SLA - hanya proses VIP.
+    var causes = [];
+    if (cfg.penyebab) {
+      var causeMap = {};
+      docs.forEach(function (d) {
+        if (d.days <= cfg.hari) return;
+        var c = SLA_PENYEBAB[d.subId] || SLA_PENYEBAB_KOSONG;
+        causeMap[c] = (causeMap[c] || 0) + 1;
+      });
+      var extra = 0;
+      causes = Object.keys(causeMap).map(function (name) {
+        var idx = SLA_PENYEBAB_URUT.indexOf(name);
+        var color = name === SLA_PENYEBAB_KOSONG ? 0
+          : idx !== -1 ? idx + 1
+          : Math.min(SLA_PENYEBAB_URUT.length + 1 + extra++, 5);   // penyebab baru di luar daftar
+        return { name: name, n: causeMap[name], color: color };
+      }).sort(function (a, b) { return b.n - a.n; });
+    }
 
     return {
-      total: slaStat(docs),
+      total: slaStat(docs, cfg.hari),
       bySource: bySource,
       byMonth: byMonth,
       buckets: buckets,
@@ -1112,35 +1150,43 @@
 
   function fmtDays(v) { return fmtNum(v, 1) + " hari"; }
 
-  function renderSla(data) {
-    document.getElementById("sla-hero-pct").textContent = fmtPct(data.total.pct);
-    document.getElementById("sla-hero-ok").textContent = data.total.ok.toLocaleString("id-ID");
-    document.getElementById("sla-hero-n").textContent = data.total.n.toLocaleString("id-ID");
-    document.getElementById("sla-hero-avg").textContent = fmtDays(data.total.avg);
-    document.getElementById("sla-hero-target").textContent = SLA_HARI + " hari kerja";
+  // Dipakai tab BAPP, BAP & VIP - root = section tab masing-masing, cfg = PROSES[key].
+  function renderSla(root, data, cfg) {
+    function f(name) { return field(root, name); }
+    f("hero-pct").textContent = fmtPct(data.total.pct);
+    f("hero-ok").textContent = data.total.ok.toLocaleString("id-ID");
+    f("hero-n").textContent = data.total.n.toLocaleString("id-ID");
+    f("hero-avg").textContent = fmtDays(data.total.avg);
+    f("sla-hari").textContent = cfg.hari + " hari kerja";
+    f("sla-juknis").textContent = cfg.juknis;
+    f("dist-sub").textContent = cfg.mulai + " → " + cfg.selesai + ", dalam hari kerja";
+    f("month-sub").textContent = "Dikelompokkan menurut bulan " + cfg.mulai;
 
-    var srcEl = document.getElementById("sla-source");
+    var srcEl = f("source");
     srcEl.textContent = "";
     data.bySource.forEach(function (s) {
       var row = meterRow(s.name, fmtPct(s.pct), Math.max(0, Math.min(100, s.pct)), false,
         s.n.toLocaleString("id-ID") + " dokumen · rata-rata " + fmtDays(s.avg));
-      row.title = s.name + "\n" + s.ok + " dari " + s.n + " dokumen terbit dalam " + SLA_HARI + " hari kerja";
+      row.title = s.name + "\n" + s.ok + " dari " + s.n + " dokumen terbit dalam " + cfg.hari + " hari kerja";
       srcEl.appendChild(row);
     });
 
-    // Bar "0-3 hari" selebar kartu; bar yang terlambat di kiri dan donat penyebabnya di kanan.
-    var okEl = document.getElementById("sla-bucket-ok");
-    var lateEl = document.getElementById("sla-bucket-late");
+    // Kelompok tepat SLA selebar kartu; kelompok yang melewati SLA di kiri, donat penyebab (VIP) di kanan.
+    var okEl = f("bucket-ok");
+    var lateEl = f("bucket-late");
     okEl.textContent = "";
     lateEl.textContent = "";
     data.buckets.forEach(function (b) {
-      var row = meterRow(b.label, fmtPct(b.share), Math.max(0, Math.min(100, b.share)), b.late,
-        b.n.toLocaleString("id-ID") + " dokumen");
+      var vals = b.n.toLocaleString("id-ID") + " dokumen";
+      if (b.okInside) {
+        vals += " · " + b.okInside.toLocaleString("id-ID") + " di antaranya " + cfg.hari + " hari (masih tepat SLA)";
+      }
+      var row = meterRow(b.label, fmtPct(b.share), Math.max(0, Math.min(100, b.share)), b.late, vals);
       (b.late ? lateEl : okEl).appendChild(row);
     });
-    renderCauseDonut(document.getElementById("sla-cause"), data.causes);
+    if (cfg.penyebab) renderCauseDonut(f("cause"), data.causes);
 
-    var tbody = document.getElementById("sla-tbody");
+    var tbody = f("tbody");
     tbody.textContent = "";
     data.byMonth.forEach(function (m) {
       addRow(tbody, [m.name, m.n.toLocaleString("id-ID"), fmtNum(m.avg, 1), m.ok.toLocaleString("id-ID"), fmtPct(m.pct)], false);
@@ -1153,15 +1199,15 @@
       fmtPct(data.total.pct)
     ], true);
 
-    var note = "SLA = selisih VIP submission s.d. SPTJP terbit, maksimal " + SLA_HARI +
+    var note = "SLA = selisih " + cfg.mulai + " s.d. " + cfg.selesai + ", maksimal " + cfg.hari +
       " hari kerja. Sabtu, Minggu, libur nasional & cuti bersama tidak dihitung.";
     if (data.pending) {
-      note += " " + data.pending + " dokumen sudah submit tapi SPTJP belum terbit (tidak dirata-rata).";
+      note += " " + data.pending + " dokumen sudah submit tapi " + cfg.belum + " (tidak dirata-rata).";
     }
     if (data.invalid) {
-      note += " " + data.invalid + " dokumen dilewati karena tanggal terbit mendahului tanggal submission.";
+      note += " " + data.invalid + " dokumen dilewati karena tanggal terbit mendahului tanggal submit.";
     }
-    document.getElementById("sla-note").textContent = note;
+    f("note").textContent = note;
 
     stampNow();
   }
@@ -1267,6 +1313,22 @@
     return null;
   }
 
+  // Header dua baris (BAPP/BAP): sel berteks persis `grup` (mis. "BAPP"), tepat di bawahnya
+  // `sub[0]` ("Submit") dan di kanannya `sub[1]` ("Terbit"). Kolom tidak dikunci.
+  // Hasil: { row: indeks baris header bawah, cols: [kolom mulai, kolom selesai] }, atau null.
+  function locateGroup(scan, grup, sub) {
+    for (var r = 0; r + 1 < scan.length; r++) {
+      var row = scan[r] || [], below = scan[r + 1] || [];
+      for (var c = 0; c < row.length; c++) {
+        if ((row[c] || "").trim() === grup &&
+            (below[c] || "").trim() === sub[0] && (below[c + 1] || "").trim() === sub[1]) {
+          return { row: r + 1, cols: [c, c + 1] };
+        }
+      }
+    }
+    return null;
+  }
+
   // Ambil rentang kolom terkecil yang memuat semua `cols`, mulai dari baris header.
   // offsets = posisi tiap kolom di dalam rentang itu (urutan sama dengan `cols`).
   function fetchColumns(gid, headerRow, cols) {
@@ -1319,9 +1381,30 @@
           return { rows: res[0].rows, offsets: res[0].offsets, usulanRows: res[1].rows };
         });
       }
-      return Promise.all([slaPart(), lkpPart()]).then(function (parts) {
-        return { name: src.name, sla: parts[0], lkp: parts[1] };
-      });
+      // BAPP/BAP: header dua baris - label grup ("BAPP"/"BAP") di atas "Submit"/"Terbit".
+      function groupPart(cfg) {
+        var loc = locateGroup(scan, cfg.grup, cfg.hdr);
+        if (!loc) {
+          return { error: "Struktur kolom sheet " + src.name + ' berubah - grup "' + cfg.grup +
+            '" dengan kolom "' + cfg.hdr.join('" / "') + '" tidak ditemukan' };
+        }
+        var uCol = -1;
+        LKP_HDR_USULAN.forEach(function (t) { if (uCol === -1) uCol = findColumn(scan[loc.row] || [], t); });
+        if (uCol === -1) {
+          return { error: "Struktur kolom sheet " + src.name + ' berubah - "' + LKP_HDR_USULAN.join('" atau "') +
+            '" tidak ditemukan di baris header ' + cfg.grup };
+        }
+        return Promise.all([
+          fetchColumns(src.gid, loc.row, loc.cols),
+          fetchCol(loc.row, uCol)
+        ]).then(function (res) {
+          return { rows: res[0].rows, offsets: res[0].offsets, usulanRows: res[1].rows };
+        });
+      }
+      return Promise.all([slaPart(), lkpPart(), groupPart(PROSES.bapp), groupPart(PROSES.bap)])
+        .then(function (parts) {
+          return { name: src.name, lkp: parts[1], proses: { sla: parts[0], bapp: parts[2], bap: parts[3] } };
+        });
     });
   }
 
@@ -1490,8 +1573,8 @@
     document.getElementById("lkp-note").textContent = note;
   }
 
-  // Tab "Penerimaan LKP" dan "SLA VIP" memakai sheet Tagihan yang sama: unduh sekali,
-  // pakai berdua. force = true saat user menekan "Muat ulang".
+  // Tab LKP, BAPP, BAP & VIP memakai sheet Tagihan yang sama: unduh sekali, pakai bersama.
+  // force = true saat user menekan "Muat ulang".
   var tagihanPromise = null;
   function getTagihanSources(force) {
     if (force || !tagihanPromise) {
@@ -1520,20 +1603,25 @@
       });
   }
 
-  function loadSla(force) {
-    setStateSla("loading");
+  // Tab SLA BAPP, BAP & VIP: data dari sheet Tagihan bersama, cfg = PROSES[key].
+  function loadProses(key, force) {
+    var cfg = PROSES[key];
+    var setState = procState[key];
+    setState("loading");
     getTagihanSources(force)
       .then(function (sources) {
-        renderSla(aggregateSla(sources.map(function (s) {
-          if (s.sla.error) throw new Error(s.sla.error);
-          return { name: s.name, rows: s.sla.rows, iStart: s.sla.offsets[0], iEnd: s.sla.offsets[1],
-            usulanRows: s.sla.usulanRows, subRows: s.sla.subRows };
-        })));
-        setStateSla("ok");
+        var data = aggregateSla(sources.map(function (s) {
+          var part = s.proses[key];
+          if (part.error) throw new Error(part.error);
+          return { name: s.name, rows: part.rows, iStart: part.offsets[0], iEnd: part.offsets[1],
+            usulanRows: part.usulanRows, subRows: part.subRows };
+        }), cfg);
+        renderSla(views[key].section, data, cfg);
+        setState("ok");
       })
       .catch(function (err) {
-        setStateSla("error",
-          "Gagal mengambil data SLA (" + err.message + "). Periksa koneksi internet lalu coba lagi.");
+        setState("error",
+          "Gagal mengambil data SLA " + cfg.judul + " (" + err.message + "). Periksa koneksi internet lalu coba lagi.");
       });
   }
 
@@ -1652,6 +1740,22 @@
   viewAkiUm.hidden = true;
   viewAki.parentNode.insertBefore(viewAkiUm, viewAki.nextSibling);
 
+  // Tab BAPP & BAP = salinan section VIP (satu cetakan untuk 3 proses SLA), tanpa donat penyebab.
+  var viewSla = document.getElementById("view-sla");
+  function cloneProses(key) {
+    var el = viewSla.cloneNode(true);
+    el.id = "view-" + key;
+    el.setAttribute("aria-labelledby", "tab-" + key);
+    el.hidden = true;
+    var fig = field(el, "cause");
+    fig.parentNode.removeChild(fig);
+    field(el, "split").classList.add("no-donut");
+    viewSla.parentNode.insertBefore(el, viewSla);
+    return el;
+  }
+  var viewBapp = cloneProses("bapp");
+  var viewBap = cloneProses("bap");
+
   var views = {
     aki: {
       tab: document.getElementById("tab-aki"),
@@ -1680,10 +1784,28 @@
       eyebrow: "Monitoring Proses Pembayaran - BPO OPK",
       title: "Penerimaan Dok LKP vs Target " + PERIODE
     },
+    bapp: {
+      tab: document.getElementById("tab-bapp"),
+      section: viewBapp,
+      load: function (force) { loadProses("bapp", force); },
+      started: false,
+      state: "loading",
+      eyebrow: "Monitoring Proses Pembayaran - BPO OPK",
+      title: "Rekapitulasi SLA Proses BAPP " + PERIODE
+    },
+    bap: {
+      tab: document.getElementById("tab-bap"),
+      section: viewBap,
+      load: function (force) { loadProses("bap", force); },
+      started: false,
+      state: "loading",
+      eyebrow: "Monitoring Proses Pembayaran - BPO OPK",
+      title: "Rekapitulasi SLA Proses BAP " + PERIODE
+    },
     sla: {
       tab: document.getElementById("tab-sla"),
-      section: document.getElementById("view-sla"),
-      load: loadSla,
+      section: viewSla,
+      load: function (force) { loadProses("sla", force); },
       started: false,
       state: "loading",
       eyebrow: "Monitoring Proses Pembayaran - BPO OPK",
@@ -1699,7 +1821,11 @@
   var setStateAki = makeSetState("aki", field(viewAki, "status"), field(viewAki, "content"), loadAki);
   var setStateAkiUm = makeSetState("aki-um", field(viewAkiUm, "status"), field(viewAkiUm, "content"), loadAkiUm);
   var setStateLkp = makeSetState("lkp", document.getElementById("lkp-status"), document.getElementById("lkp-content"), loadLkp);
-  var setStateSla = makeSetState("sla", document.getElementById("sla-status"), document.getElementById("sla-content"), loadSla);
+  var procState = {};
+  ["bapp", "bap", "sla"].forEach(function (k) {
+    var sec = views[k].section;
+    procState[k] = makeSetState(k, field(sec, "status"), field(sec, "content"), function () { loadProses(k, true); });
+  });
 
   function syncRefreshBtn() {
     var v = views[active];
@@ -1728,11 +1854,12 @@
     views[k].tab.addEventListener("click", function () { activate(k); });
   });
   btnRefresh.addEventListener("click", function () {
-    // Pasangan tab berbagi data (AKI & AKI Exc UM: CSV LKAI; Penerimaan LKP & SLA VIP:
-    // sheet Tagihan). Setelah dimuat ulang dari satu tab, tab pasangannya ikut dirender
-    // ulang saat dibuka agar angkanya tidak beda versi.
-    var partner = { aki: "aki-um", "aki-um": "aki", lkp: "sla", sla: "lkp" }[active];
-    if (partner) views[partner].started = false;
+    // Tab yang berbagi data (AKI & AKI Exc UM: CSV LKAI; LKP, BAPP, BAP & VIP: sheet Tagihan)
+    // ikut dirender ulang saat dibuka berikutnya, agar angkanya tidak beda versi.
+    [["aki", "aki-um"], ["lkp", "bapp", "bap", "sla"]].forEach(function (group) {
+      if (group.indexOf(active) === -1) return;
+      group.forEach(function (k) { if (k !== active) views[k].started = false; });
+    });
     views[active].load(true);
   });
   window.addEventListener("hashchange", function () {
@@ -1740,7 +1867,8 @@
     if (views[k] && k !== active) activate(k, true);
   });
 
-  // Tab bisa ditautkan langsung: .../#aki-um (AKI Exc UM), .../#lkp (Penerimaan LKP), .../#sla (SLA VIP).
+  // Tab bisa ditautkan langsung: .../#aki-um (AKI Exc UM), .../#lkp (LKP), .../#bapp (BAPP),
+  // .../#bap (BAP), .../#sla (VIP).
   var start = location.hash.replace("#", "");
   activate(views[start] ? start : "aki", true);
 
