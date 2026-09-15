@@ -24,12 +24,13 @@
     /* Donat penyebab keterlambatan SLA: gradasi merah (selaras bar "Melewati SLA" --err),
        terang-gelap berselang; --cause-ink-N = warna teks label di atas irisan N.
        0 = belum dikategorikan (abu). */
+    /* Tidak ada merah yang terlalu pucat: irisan tipis tetap terlihat jelas di atas latar. */
     --cause-0: #b4b2aa; --cause-ink-0: #0b0b0b;
-    --cause-1: #8e1f1f; --cause-ink-1: #ffffff;
-    --cause-2: #f0a3a3; --cause-ink-2: #0b0b0b;
-    --cause-3: #d03b3b; --cause-ink-3: #ffffff;
-    --cause-4: #fad4d4; --cause-ink-4: #0b0b0b;
-    --cause-5: #b65454; --cause-ink-5: #ffffff;
+    --cause-1: #7a1c1c; --cause-ink-1: #ffffff;
+    --cause-2: #b32d2d; --cause-ink-2: #ffffff;
+    --cause-3: #e46a6a; --cause-ink-3: #0b0b0b;
+    --cause-4: #ea8585; --cause-ink-4: #0b0b0b;
+    --cause-5: #9a4a4a; --cause-ink-5: #ffffff;
     --hero-overlay: rgba(252, 252, 251, 0.72);
   }
   @media (prefers-color-scheme: dark) {
@@ -47,10 +48,10 @@
       --warn: #f5a042;
       --cause-0: #5f5e5a; --cause-ink-0: #ffffff;
       --cause-1: #f4a6a6; --cause-ink-1: #0b0b0b;
-      --cause-2: #b83232; --cause-ink-2: #ffffff;
-      --cause-3: #e66767; --cause-ink-3: #0b0b0b;
-      --cause-4: #7a1f1f; --cause-ink-4: #ffffff;
-      --cause-5: #c98a8a; --cause-ink-5: #0b0b0b;
+      --cause-2: #f08a8a; --cause-ink-2: #0b0b0b;
+      --cause-3: #c94444; --cause-ink-3: #ffffff;
+      --cause-4: #b83a3a; --cause-ink-4: #ffffff;
+      --cause-5: #d98f8f; --cause-ink-5: #0b0b0b;
       --hero-overlay: rgba(26, 26, 25, 0.72);
     }
   }
@@ -1206,7 +1207,7 @@
       shape.appendChild(tip);
       svg.appendChild(shape);
 
-      if (frac >= 0.1) {   // irisan kecil: angkanya cukup di legenda
+      if (frac >= 0.06) {   // label muat mulai ±6% (mis. 1 dari 14 = 7,1%); lebih kecil lagi cukup di legenda
         var mid = pt((R + R0) / 2, (a0 + a1) / 2);
         var ink = "fill: var(--cause-ink-" + c.color + ")";
         var t1 = el("text", { x: mid[0], y: mid[1] - 2, "text-anchor": "middle", "class": "donut-label", style: ink });
