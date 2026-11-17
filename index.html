@@ -224,18 +224,6 @@
   td.miss { color: var(--err); }
   .unit-note { font-size: 11px; color: var(--muted); margin: 8px 0 0; }
 
-  /* Kartu Dokumen (PDF di Google Drive): info kiri, tombol kanan; tombol turun di layar sempit */
-  .doc-list { list-style: none; margin: 0; padding: 0; }
-  .doc-list li {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
-    padding: 10px 0; border-bottom: 1px solid var(--grid);
-  }
-  .doc-list li:first-child { padding-top: 0; }
-  .doc-list li:last-child { border-bottom: none; padding-bottom: 0; }
-  .doc-info { flex: 1 1 200px; min-width: 0; }
-  .doc-title { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
-  .doc-desc { font-size: 12px; color: var(--muted); margin-top: 1px; }
-  .doc-actions { display: flex; gap: 6px; flex: none; }
   .btn-link {
     display: inline-block; text-decoration: none;
     font: 600 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -244,13 +232,58 @@
   }
   .btn-link:focus-visible { outline: 2px solid var(--fill); outline-offset: 2px; }
 
-  /* Judul kartu + tombol link di kanan; tombol turun ke bawah bila layar sempit */
-  .card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin: 0 0 2px; }
-  .card-head h2 { margin: 0; }
-  .btn-ext { font-size: 12px; padding: 7px 10px; }
-
   footer { font-size: 11px; color: var(--muted); }
   [hidden] { display: none !important; }
+
+  /* ---------- Laporan: pratinjau selebar A4 + aturan cetak PDF ---------- */
+  .header-actions { display: flex; gap: 8px; flex: none; margin-top: 2px; }
+  .report-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  /* Token warna ditulis ulang di dalam kertas: laporan selalu bertema terang,
+     walau dashboard sedang memakai mode gelap. */
+  .paper {
+    --page: #ffffff; --surface: #ffffff; --ink: #0b0b0b; --ink-2: #52514e; --muted: #77756f;
+    --grid: #e1e0d9; --border: rgba(11, 11, 11, 0.12); --fill: #2a78d6; --track: #cde2fb;
+    --err: #d03b3b; --warn: #e8710a; --hero-overlay: rgba(252, 252, 251, 0.78);
+    --cause-0: #b4b2aa; --cause-ink-0: #0b0b0b;
+    --cause-1: #7a1c1c; --cause-ink-1: #ffffff;
+    --cause-2: #b32d2d; --cause-ink-2: #ffffff;
+    --cause-3: #e46a6a; --cause-ink-3: #0b0b0b;
+    --cause-4: #ea8585; --cause-ink-4: #0b0b0b;
+    --cause-5: #9a4a4a; --cause-ink-5: #ffffff;
+    width: 794px; max-width: 100%; margin: 0 auto;   /* 794px = lebar A4 pada 96 dpi */
+    background: #ffffff; color: var(--ink);
+    padding: 26px 30px; border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+  }
+  .rep-cover { border-bottom: 2px solid var(--fill); padding-bottom: 12px; }
+  .rep-cover img { height: 32px; width: auto; display: block; }
+  .rep-cover h1 { font-size: 20px; margin: 10px 0 4px; line-height: 1.25; }
+  .rep-cover .sub { font-size: 11.5px; color: var(--ink-2); margin: 0 0 2px; }
+  .rep-kpi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+  @media (max-width: 700px) { .rep-kpi { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .rep-kpi .item { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  .rep-kpi .lbl { font-size: 9.5px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--ink-2); }
+  .rep-kpi .val { font-size: 19px; font-weight: 600; line-height: 1.2; margin-top: 2px; }
+  .rep-kpi .ket { font-size: 10px; color: var(--muted); overflow-wrap: anywhere; }
+  .part-title { font-size: 21px; font-weight: 700; margin: 26px 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--fill); }
+  .rep-section { margin-top: 18px; }
+  .rep-h { font-size: 15px; font-weight: 600; margin: 0 0 10px; }
+  body.report-open header, body.report-open .tabs { display: none; }
+
+  @media print {
+    @page { size: A4 portrait; margin: 12mm; }
+    html, body { background: #ffffff; }
+    body { padding: 0; }
+    header, .tabs, .report-actions { display: none !important; }
+    .wrap { max-width: none; gap: 0; }
+    .paper { width: auto; max-width: none; padding: 0; box-shadow: none; border-radius: 0; }
+    .rep-section, .part-title { break-before: page; }
+    .part-title { break-after: avoid; }
+    .part-title + .rep-section { break-before: auto; }   /* bagian menempel di bawah judul besarnya */
+    .rep-cover { break-after: avoid; }
+    .card, table, .row, .rep-kpi .item { break-inside: avoid; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
 </style>
 </head>
 <body>
@@ -261,12 +294,15 @@
       <h1 id="title">Realisasi Pembayaran vs Target AKI 2026</h1>
       <p class="stamp" id="stamp" hidden></p>
     </div>
-    <button id="btn-refresh" type="button" hidden>Muat ulang</button>
+    <div class="header-actions">
+      <button id="btn-report" class="btn-link" type="button">Report</button>
+      <button id="btn-refresh" type="button" hidden>Muat ulang</button>
+    </div>
   </header>
 
   <div class="tabs" role="tablist">
     <button id="tab-aki" type="button" role="tab" aria-selected="true" aria-controls="view-aki">AKI</button>
-    <button id="tab-aki-um" type="button" role="tab" aria-selected="false" aria-controls="view-aki-um">AKI Exc UM</button>
+    <button id="tab-aki-um" type="button" role="tab" aria-selected="false" aria-controls="view-aki-um">AKI Waiver</button>
     <button id="tab-lkp" type="button" role="tab" aria-selected="false" aria-controls="view-lkp">LKP</button>
     <button id="tab-bapp" type="button" role="tab" aria-selected="false" aria-controls="view-bapp">BAPP</button>
     <button id="tab-bap" type="button" role="tab" aria-selected="false" aria-controls="view-bap">BAP</button>
@@ -274,7 +310,7 @@
   </div>
 
   <!-- ================= Tab 1: Realisasi vs Target AKI =================
-       Tab "AKI 2026 Exc UM" tidak punya markup sendiri: script menyalin
+       Tab "AKI Waiver" tidak punya markup sendiri: script menyalin
        section ini (cloneNode), karena itu elemen isi memakai data-f, bukan id. -->
   <section class="view" id="view-aki" role="tabpanel" aria-labelledby="tab-aki">
     <div class="card status" data-f="status">
@@ -299,27 +335,23 @@
 
       <div class="card">
         <h2>Capaian per BPO Kinerja</h2>
-        <p class="sub">Realisasi s.d n terhadap Target AKI 2026</p>
+        <p class="sub">Realisasi s.d n terhadap <span data-f="lbl-target">Target AKI 2026</span></p>
         <div class="legend">
           <span><i class="key fill"></i>Realisasi s.d n</span>
-          <span><i class="key track"></i>Target AKI 2026</span>
+          <span><i class="key track"></i><span data-f="lbl-target">Target AKI 2026</span></span>
         </div>
         <div data-f="chart"></div>
       </div>
 
       <div class="card">
-        <div class="card-head">
-          <h2>Tabel Rekap</h2>
-          <a class="btn-link btn-ext" href="https://drive.google.com/file/d/1NqEJ49DCvwGHRIOWpxGUR7QxRorsg32B/view?usp=sharing"
-             target="_blank" rel="noopener" title="Buka di Google Drive">Target AKI OPK 2 - Agustus 2026 <span aria-hidden="true">&#8599;</span></a>
-        </div>
+        <h2>Tabel Rekap</h2>
         <p class="sub">Nilai dalam Miliar Rupiah</p>
         <div class="tbl-scroll">
           <table>
             <thead>
               <tr>
                 <th>BPO Kinerja</th>
-                <th>Target AKI 2026</th>
+                <th data-f="lbl-target">Target AKI 2026</th>
                 <th>Realisasi s.d n</th>
                 <th>Sisa Target</th>
                 <th>%</th>
@@ -328,13 +360,6 @@
             <tbody data-f="tbody"></tbody>
           </table>
         </div>
-        <p class="unit-note" data-f="um-note" hidden></p>
-      </div>
-
-      <div class="card" data-f="docs" hidden>
-        <h2>Dokumen</h2>
-        <p class="sub">Dibuka di Google Drive &middot; akses mengikuti izin file di Drive</p>
-        <ul class="doc-list" data-f="doc-list"></ul>
       </div>
 
       <footer>
@@ -507,6 +532,19 @@
       </footer>
     </div>
   </section>
+
+  <!-- ================= Laporan (pratinjau A4, dicetak jadi PDF) =================
+       Bukan tab: isinya disusun script dari salinan konten tiap tab. -->
+  <section class="view" id="view-report" hidden>
+    <div class="report-actions">
+      <button class="btn-link" id="report-back" type="button">&larr; Kembali</button>
+      <button class="btn-link" id="report-print" type="button">Simpan PDF</button>
+    </div>
+    <div class="paper">
+      <p class="unit-note" id="report-status" hidden></p>
+      <div id="report-body"></div>
+    </div>
+  </section>
 </div>
 
 <script>
@@ -523,22 +561,12 @@
   var ROW_H5 = 4, ROW_H6 = 5; // baris header (0-based) tempat teks kolom dicocokkan
   var FILTER_BPO = ["OPK 1", "OPK 2"];
 
-  // Kartu "Dokumen": PDF di Google Drive per tab (key = tab: "aki", "aki-um").
-  // Akses file diatur di Google Drive, bukan di dashboard. Mengganti isi PDF lewat
-  // Drive "Kelola versi" -> link tetap sama, dashboard tidak perlu diubah.
-  // Kartu tersembunyi selama daftar tab itu kosong.
-  var DOKUMEN = {
-    aki: [
-      // { judul: "Judul dokumen", keterangan: "opsional", url: "https://drive.google.com/file/d/<ID>/view?usp=sharing" }
-    ],
-    "aki-um": []
-  };
-
-  // Komitmen Uang Muka untuk tab "AKI 2026 Exc UM": sheet HISTORY, blok H:L
-  // (BPO UIP | BPO KIN | No PRK | Program Utama/Proyek | Komitmen UM).
-  // Range mulai baris 3 (header) supaya strukturnya bisa diperiksa. ±2 KB.
-  var HISTORY_CSV =
-    "https://docs.google.com/spreadsheets/d/1cZzH3M6-VN1l3iKxuRtL-PHlKbYdCOiFNqGCPgBYP2w/export?format=csv&gid=1084186449&range=H3:L3000";
+  // Tab "AKI Waiver": target = sub-kolom "AKI" (baris header 6) di bawah grup
+  // header baris 5 berteks ini (saat dibuat: kolom AX). Dicari lewat teks, bukan
+  // posisi, jadi tetap benar walau kolom digeser/disisipi. Spasi & baris baru
+  // di sel header dirapatkan sebelum dibandingkan.
+  var SKAI_WAIVER_HEADER = "SKAI Tahun 2026 Revisi 5 tanggal 16 Nov 2026";
+  var WAIVER_TARGET_LABEL = "Target AKI 2026 (SKAI Rev 5)";
 
   // Sheet "Rekapitulasi Tagihan". Posisi kolom SENGAJA tidak dikunci: pemilik
   // sheet pernah menyisipkan kolom (Sep 2026) sehingga Unit BS/BV bergeser ke
@@ -868,17 +896,33 @@
     return cols;
   }
 
-  // um (opsional, khusus tab Exc UM): { byPrk: { "No PRK": nilai }, prkCol: indeks kolom No PRK }.
-  // Target AKI tiap PRK dikurangi Komitmen UM-nya - sekali per PRK, walau PRK
-  // itu muncul di beberapa baris kegiatan.
-  function aggregate(rows, cols, um) {
+  function normHeader(s) { return (s || "").replace(/\s+/g, " ").trim(); }
+
+  // Kolom target tab "AKI Waiver": sel header baris 5 = SKAI_WAIVER_HEADER
+  // (sel gabungan - di CSV teksnya hanya di kolom pertama grup), lalu sub-kolom
+  // "AKI" di baris 6 di dalam grup itu (sampai sel header baris 5 berikutnya).
+  function findSkaiAki(rows) {
+    var h5 = rows[ROW_H5] || [];
+    var h6 = rows[ROW_H6] || [];
+    var start = -1;
+    for (var i = 0; i < h5.length; i++) {
+      if (normHeader(h5[i]) === SKAI_WAIVER_HEADER) { start = i; break; }
+    }
+    if (start !== -1) {
+      for (var j = start; j < Math.max(h5.length, h6.length); j++) {
+        if (j > start && normHeader(h5[j])) break;   // sudah masuk grup header lain
+        if (normHeader(h6[j]) === "AKI") return j;
+      }
+    }
+    throw new Error("Struktur header sheet berubah - kolom tidak ditemukan: " + SKAI_WAIVER_HEADER + " / AKI");
+  }
+
+  function aggregate(rows, cols) {
     var groups = {};
     // Total per BPO asli (lintas KIN) - independen dari grup KIN gabungan di bawah
     var opk1 = { target: 0, real: 0 };
     var opk2 = { target: 0, real: 0 };
-    var umLeft = {};
-    if (um) Object.keys(um.byPrk).forEach(function (k) { umLeft[k] = um.byPrk[k]; });
-    var maxCol = Math.max(cols.bpo, cols.kin, cols.aki, cols.real, um ? um.prkCol : -1);
+    var maxCol = Math.max(cols.bpo, cols.kin, cols.aki, cols.real);
     for (var i = HEADER_ROWS; i < rows.length; i++) {
       var r = rows[i];
       if (!r || r.length <= maxCol) continue;
@@ -886,13 +930,6 @@
       if (FILTER_BPO.indexOf(bpo) === -1) continue;
       var target = parseIdNumber(r[cols.aki]);
       var real = parseIdNumber(r[cols.real]);
-      if (um) {
-        var prk = (r[um.prkCol] || "").trim();
-        if (prk && Object.prototype.hasOwnProperty.call(umLeft, prk)) {
-          target -= umLeft[prk];
-          delete umLeft[prk];
-        }
-      }
 
       var kin = (r[cols.kin] || "").trim() || "(tanpa KIN)";
       if (!groups[kin]) groups[kin] = { name: kin, target: 0, real: 0 };
@@ -919,30 +956,8 @@
     return {
       rows: list,
       totalOpk1: { target: opk1.target, real: opk1.real, pct: opk1.target !== 0 ? 100 * opk1.real / opk1.target : 0 },
-      totalOpk2: { target: opk2.target, real: opk2.real, pct: opk2.target !== 0 ? 100 * opk2.real / opk2.target : 0 },
-      unmatchedUm: Object.keys(umLeft)   // PRK di HISTORY yang tak ketemu di baris OPK 1/OPK 2
+      totalOpk2: { target: opk2.target, real: opk2.real, pct: opk2.target !== 0 ? 100 * opk2.real / opk2.target : 0 }
     };
-  }
-
-  // ---- Komitmen UM dari sheet HISTORY -> { "No PRK": nilai } ----
-  function parseUm(rows) {
-    var head = rows[0] || [];
-    var cPrk = findColumn(head, "No PRK");
-    var cUm = findColumn(head, "Komitmen UM");
-    if (cPrk === -1 || cUm === -1) {
-      throw new Error('Struktur sheet HISTORY berubah - kolom "No PRK" / "Komitmen UM" tidak ditemukan');
-    }
-    var byPrk = {}, n = 0;
-    for (var i = 1; i < rows.length; i++) {
-      var r = rows[i];
-      if (!r) continue;
-      var prk = (r[cPrk] || "").trim();
-      if (!prk) continue;
-      byPrk[prk] = (byPrk[prk] || 0) + parseIdNumber(r[cUm]);
-      n++;
-    }
-    if (!n) throw new Error("Sheet HISTORY tidak berisi data Komitmen UM");
-    return byPrk;
   }
 
   // ---- Format tampilan ----
@@ -951,8 +966,8 @@
 
   function field(root, name) { return root.querySelector('[data-f="' + name + '"]'); }
 
-  // Dipakai tab "AKI 2026" dan "AKI 2026 Exc UM" - root = section tab masing-masing.
-  function renderAki(root, data) {
+  // Dipakai tab "AKI 2026" dan "AKI Waiver" - root = section tab masing-masing.
+  function renderAki(root, data, targetLabel) {
     field(root, "hero-opk1-pct").textContent = fmtPct(data.totalOpk1.pct);
     field(root, "hero-opk1-real").textContent = fmtFull(data.totalOpk1.real);
     field(root, "hero-opk1-target").textContent = fmtFull(data.totalOpk1.target);
@@ -965,7 +980,7 @@
     data.rows.forEach(function (r) {
       var w = Math.max(0, Math.min(100, r.pct));
       var row = meterRow(r.name, fmtPct(r.pct), w, false, fmtFull(r.real) + " dari " + fmtFull(r.target));
-      row.title = r.name + "\nTarget AKI 2026: " + fmtFull(r.target) + "\nRealisasi s.d n: " + fmtFull(r.real);
+      row.title = r.name + "\n" + (targetLabel || "Target AKI 2026") + ": " + fmtFull(r.target) + "\nRealisasi s.d n: " + fmtFull(r.real);
       chart.appendChild(row);
     });
 
@@ -983,18 +998,10 @@
         tr.title = "Target: " + fmtFull(r.target) + "\nRealisasi: " + fmtFull(r.real) + "\nSisa Target: " + fmtFull(sisa);
       });
 
-    var note = field(root, "um-note");
-    var miss = data.unmatchedUm || [];
-    note.hidden = !miss.length;
-    note.textContent = miss.length
-      ? "Perhatian: Komitmen UM untuk " + miss.length + " PRK tidak ditemukan pada baris OPK 1/OPK 2 " +
-        "di LKAI Terbit sehingga belum dikurangkan: " + miss.join(", ") + "."
-      : "";
-
     stampNow();
   }
 
-  // Tab "AKI 2026" dan "AKI 2026 Exc UM" memakai CSV LKAI yang sama (±900 KB):
+  // Tab "AKI 2026" dan "AKI Waiver" memakai CSV LKAI yang sama (±900 KB):
   // unduh sekali, pakai berdua. force = true saat user menekan "Muat ulang".
   var lkaiPromise = null;
   function getLkaiRows(force) {
@@ -1008,7 +1015,7 @@
 
   function loadAki(force) {
     setStateAki("loading");
-    getLkaiRows(force)
+    return getLkaiRows(force)
       .then(function (rows) {
         var cols = resolveColumns(rows);
         renderAki(views.aki.section, aggregate(rows, cols));
@@ -1022,14 +1029,13 @@
 
   function loadAkiUm(force) {
     setStateAkiUm("loading");
-    Promise.all([getLkaiRows(force), fetchCsv(HISTORY_CSV)])
-      .then(function (res) {
-        var rows = res[0];
+    return getLkaiRows(force)
+      .then(function (rows) {
         var cols = resolveColumns(rows);
-        // Kolom No PRK hanya dicari di sini, supaya tab AKI biasa tidak ikut gagal bila kolom itu hilang.
-        var prkCol = findColumn(rows[ROW_H5] || [], "No PRK");
-        if (prkCol === -1) throw new Error("Struktur header sheet berubah - kolom tidak ditemukan: No PRK");
-        renderAki(views["aki-um"].section, aggregate(rows, cols, { byPrk: parseUm(res[1]), prkCol: prkCol }));
+        // Target diganti kolom SKAI Revisi 5 / AKI. Dicari hanya di sini, supaya
+        // tab AKI biasa tidak ikut gagal bila kolom itu hilang.
+        cols.aki = findSkaiAki(rows);
+        renderAki(views["aki-um"].section, aggregate(rows, cols), WAIVER_TARGET_LABEL);
         setStateAkiUm("ok");
       })
       .catch(function (err) {
@@ -1594,7 +1600,7 @@
 
   function loadLkp(force) {
     setStateLkp("loading");
-    getTagihanSources(force)
+    return getTagihanSources(force)
       .then(function (sources) {
         renderLkp(aggregateLkp(sources.map(function (s) {
           if (s.lkp.error) throw new Error(s.lkp.error);
@@ -1615,7 +1621,7 @@
     var cfg = PROSES[key];
     var setState = procState[key];
     setState("loading");
-    getTagihanSources(force)
+    return getTagihanSources(force)
       .then(function (sources) {
         var data = aggregateSla(sources.map(function (s) {
           var part = s.proses[key];
@@ -1670,58 +1676,6 @@
     return row;
   }
 
-  // ID file Google Drive dari link ".../file/d/<ID>/view" atau "...?id=<ID>"; null bila bukan link file.
-  function driveFileId(url) {
-    var m = /\/file\/d\/([\w-]{10,})/.exec(url) || /[?&]id=([\w-]{10,})/.exec(url);
-    return m ? m[1] : null;
-  }
-
-  // Isi kartu "Dokumen" di section tab dari DOKUMEN[key]. Semua teks lewat textContent.
-  function renderDocs(root, key) {
-    var card = field(root, "docs");
-    var list = field(root, "doc-list");
-    var docs = (DOKUMEN[key] || []).filter(function (d) { return d && /^https:\/\//.test(d.url || ""); });
-    list.textContent = "";
-    card.hidden = !docs.length;
-    docs.forEach(function (d) {
-      var li = document.createElement("li");
-      var info = document.createElement("div");
-      info.className = "doc-info";
-      var title = document.createElement("div");
-      title.className = "doc-title";
-      title.textContent = d.judul || "Dokumen";
-      info.appendChild(title);
-      if (d.keterangan) {
-        var desc = document.createElement("div");
-        desc.className = "doc-desc";
-        desc.textContent = d.keterangan;
-        info.appendChild(desc);
-      }
-      var actions = document.createElement("div");
-      actions.className = "doc-actions";
-      function addLink(text, href) {
-        var a = document.createElement("a");
-        a.className = "btn-link";
-        a.href = href;
-        a.target = "_blank";
-        a.rel = "noopener";
-        a.textContent = text;
-        a.setAttribute("aria-label", text + " " + (d.judul || "dokumen"));
-        actions.appendChild(a);
-      }
-      var id = driveFileId(d.url);
-      if (id) {
-        addLink("Lihat", d.url);
-        addLink("Unduh", "https://drive.google.com/uc?export=download&id=" + encodeURIComponent(id));
-      } else {
-        addLink("Buka", d.url);   // bukan link file Drive (mis. folder) - cukup dibuka
-      }
-      li.appendChild(info);
-      li.appendChild(actions);
-      list.appendChild(li);
-    });
-  }
-
   function addRow(tbody, cells, isTotal) {
     var tr = document.createElement("tr");
     if (isTotal) tr.className = "total";
@@ -1738,13 +1692,17 @@
      Tab switcher
      ===================================================================== */
 
-  // Tab "AKI 2026 Exc UM" = salinan persis section "AKI 2026", supaya posisi
+  // Tab "AKI Waiver" = salinan persis section "AKI 2026", supaya posisi
   // dan isi grafik tidak bisa melenceng antar-tab. Dibuat sebelum data dimuat.
+  // Hanya label target yang diganti (elemen data-f="lbl-target").
   var viewAki = document.getElementById("view-aki");
   var viewAkiUm = viewAki.cloneNode(true);
   viewAkiUm.id = "view-aki-um";
   viewAkiUm.setAttribute("aria-labelledby", "tab-aki-um");
   viewAkiUm.hidden = true;
+  Array.prototype.forEach.call(viewAkiUm.querySelectorAll('[data-f="lbl-target"]'), function (el) {
+    el.textContent = WAIVER_TARGET_LABEL;
+  });
   viewAki.parentNode.insertBefore(viewAkiUm, viewAki.nextSibling);
 
   // Tab BAPP & BAP = salinan section VIP (satu cetakan untuk 3 proses SLA), tanpa donat penyebab.
@@ -1780,7 +1738,7 @@
       started: false,
       state: "loading",
       eyebrow: "Monitoring AKI Non Rutin - BPO OPK",
-      title: "Realisasi Pembayaran vs Target AKI 2026 Exc UM"
+      title: "Realisasi Pembayaran vs Target AKI 2026 Waiver"
     },
     lkp: {
       tab: document.getElementById("tab-lkp"),
@@ -1794,7 +1752,7 @@
     bapp: {
       tab: document.getElementById("tab-bapp"),
       section: viewBapp,
-      load: function (force) { loadProses("bapp", force); },
+      load: function (force) { return loadProses("bapp", force); },
       started: false,
       state: "loading",
       eyebrow: "Monitoring Proses Pembayaran - BPO OPK",
@@ -1803,7 +1761,7 @@
     bap: {
       tab: document.getElementById("tab-bap"),
       section: viewBap,
-      load: function (force) { loadProses("bap", force); },
+      load: function (force) { return loadProses("bap", force); },
       started: false,
       state: "loading",
       eyebrow: "Monitoring Proses Pembayaran - BPO OPK",
@@ -1812,7 +1770,7 @@
     sla: {
       tab: document.getElementById("tab-sla"),
       section: viewSla,
-      load: function (force) { loadProses("sla", force); },
+      load: function (force) { return loadProses("sla", force); },
       started: false,
       state: "loading",
       eyebrow: "Monitoring Proses Pembayaran - BPO OPK",
@@ -1820,10 +1778,6 @@
     }
   };
   var active = "aki";
-
-  // Kartu Dokumen tidak bergantung data sheet: diisi sekali saat startup, per tab.
-  renderDocs(viewAki, "aki");
-  renderDocs(viewAkiUm, "aki-um");
 
   var setStateAki = makeSetState("aki", field(viewAki, "status"), field(viewAki, "content"), loadAki);
   var setStateAkiUm = makeSetState("aki-um", field(viewAkiUm, "status"), field(viewAkiUm, "content"), loadAkiUm);
@@ -1857,11 +1811,136 @@
     if (!v.started) { v.started = true; v.load(); }
   }
 
+  /* =====================================================================
+     Laporan: pratinjau selebar A4, dicetak ke PDF lewat browser
+     ===================================================================== */
+
+  var REPORT_URUT = ["aki", "aki-um", "lkp", "bapp", "bap", "sla"];
+  var REPORT_BAB = { lkp: "Evaluasi Proses Tagihan" };   // judul besar yang menaungi LKP s.d. VIP
+  var viewReport = document.getElementById("view-report");
+  var reportBody = document.getElementById("report-body");
+  var reportStatus = document.getElementById("report-status");
+
+  function teksEl(el) { return el ? el.textContent.trim() : "-"; }
+
+  // Wadah isi tab: tab AKI & SLA memakai data-f, tab LKP masih memakai id.
+  function isiTab(key) {
+    var sec = views[key].section;
+    return field(sec, "content") || sec.querySelector('.view[id$="-content"]');
+  }
+
+  function ringkasanLaporan() {
+    function heroF(key, nama) { return teksEl(field(views[key].section, nama)); }
+    function dok(key) { return heroF(key, "hero-ok") + " dari " + heroF(key, "hero-n") + " dokumen"; }
+    function aki(key, n) {
+      return { lbl: (key === "aki" ? "AKI 2026" : "AKI Waiver") + " · OPK " + n,
+        val: heroF(key, "hero-opk" + n + "-pct"),
+        ket: heroF(key, "hero-opk" + n + "-real") + " dari " + heroF(key, "hero-opk" + n + "-target") };
+    }
+    return [
+      aki("aki", 1), aki("aki", 2), aki("aki-um", 1), aki("aki-um", 2),
+      { lbl: "LKP tepat waktu", val: teksEl(document.getElementById("lkp-hero-pct")),
+        ket: teksEl(document.getElementById("lkp-hero-ok")) + " dari " +
+             teksEl(document.getElementById("lkp-hero-n")) + " dokumen" },
+      { lbl: "BAPP tepat SLA", val: heroF("bapp", "hero-pct"), ket: dok("bapp") },
+      { lbl: "BAP tepat SLA", val: heroF("bap", "hero-pct"), ket: dok("bap") },
+      { lbl: "VIP tepat SLA", val: heroF("sla", "hero-pct"), ket: dok("sla") }
+    ];
+  }
+
+  function susunLaporan() {
+    reportBody.textContent = "";
+
+    var cover = document.createElement("section");
+    cover.className = "rep-cover";
+    cover.innerHTML =
+      '<img src="logo-PLN.png" alt="PLN">' +
+      '<h1>Laporan Monitoring Pembayaran &mdash; BPO OPK</h1>' +
+      '<p class="sub">Periode ' + PERIODE + ' &middot; <span class="rep-stamp"></span></p>' +
+      '<p class="sub">Sumber: Google Sheet Bidang Keuangan &mdash; &ldquo;Monitoring dan Evaluasi Anggaran ' +
+      'Investasi USLW ' + PERIODE + '&rdquo; dan &ldquo;Rekapitulasi Tagihan Pusat &amp; Unit&rdquo;</p>';
+    cover.querySelector(".rep-stamp").textContent = teksEl(elStamp);
+
+    var kpi = document.createElement("div");
+    kpi.className = "rep-kpi";
+    ringkasanLaporan().forEach(function (it) {
+      var box = document.createElement("div");
+      box.className = "item";
+      box.innerHTML = '<div class="lbl"></div><div class="val"></div><div class="ket"></div>';
+      box.querySelector(".lbl").textContent = it.lbl;
+      box.querySelector(".val").textContent = it.val;
+      box.querySelector(".ket").textContent = it.ket;
+      kpi.appendChild(box);
+    });
+    cover.appendChild(kpi);
+    reportBody.appendChild(cover);
+
+    REPORT_URUT.forEach(function (key, i) {
+      if (REPORT_BAB[key]) {
+        var bab = document.createElement("h2");
+        bab.className = "part-title";
+        bab.textContent = REPORT_BAB[key];
+        reportBody.appendChild(bab);
+      }
+      var sec = document.createElement("section");
+      sec.className = "rep-section";
+      var h = document.createElement("h3");
+      h.className = "rep-h";
+      h.textContent = (i + 1) + ". " + views[key].title;
+      sec.appendChild(h);
+
+      var isi = isiTab(key);
+      if (isi && !isi.hidden) {
+        // Disalin dari hasil render tab, jadi angkanya dijamin sama dengan yang tampil.
+        var salin = isi.cloneNode(true);
+        salin.hidden = false;
+        Array.prototype.forEach.call(salin.querySelectorAll("footer"), function (el) {
+          el.parentNode.removeChild(el);
+        });
+        Array.prototype.forEach.call(salin.querySelectorAll("[id]"), function (el) { el.removeAttribute("id"); });
+        sec.appendChild(salin);
+      } else {
+        var p = document.createElement("p");
+        p.className = "unit-note";
+        p.textContent = "Data bagian ini belum bisa ditampilkan.";
+        sec.appendChild(p);
+      }
+      reportBody.appendChild(sec);
+    });
+    reportStatus.hidden = true;
+  }
+
+  function openReport() {
+    document.body.classList.add("report-open");
+    Object.keys(views).forEach(function (k) { views[k].section.hidden = true; });
+    viewReport.hidden = false;
+    reportBody.textContent = "";
+    reportStatus.hidden = false;
+    reportStatus.textContent = "Menyiapkan laporan… (memuat data semua tab)";
+    // Tab yang belum pernah dibuka dimuat dulu; CSV LKAI & sheet Tagihan tetap dipakai bersama.
+    Promise.all(REPORT_URUT.map(function (k) {
+      var v = views[k];
+      if (v.started) return null;
+      v.started = true;
+      return v.load();
+    })).then(susunLaporan, susunLaporan);
+  }
+
+  function closeReport() {
+    document.body.classList.remove("report-open");
+    viewReport.hidden = true;
+    activate(active, true);
+  }
+
+  document.getElementById("btn-report").addEventListener("click", openReport);
+  document.getElementById("report-back").addEventListener("click", closeReport);
+  document.getElementById("report-print").addEventListener("click", function () { window.print(); });
+
   Object.keys(views).forEach(function (k) {
     views[k].tab.addEventListener("click", function () { activate(k); });
   });
   btnRefresh.addEventListener("click", function () {
-    // Tab yang berbagi data (AKI & AKI Exc UM: CSV LKAI; LKP, BAPP, BAP & VIP: sheet Tagihan)
+    // Tab yang berbagi data (AKI & AKI Waiver: CSV LKAI; LKP, BAPP, BAP & VIP: sheet Tagihan)
     // ikut dirender ulang saat dibuka berikutnya, agar angkanya tidak beda versi.
     [["aki", "aki-um"], ["lkp", "bapp", "bap", "sla"]].forEach(function (group) {
       if (group.indexOf(active) === -1) return;
@@ -1874,7 +1953,7 @@
     if (views[k] && k !== active) activate(k, true);
   });
 
-  // Tab bisa ditautkan langsung: .../#aki-um (AKI Exc UM), .../#lkp (LKP), .../#bapp (BAPP),
+  // Tab bisa ditautkan langsung: .../#aki-um (AKI Waiver), .../#lkp (LKP), .../#bapp (BAPP),
   // .../#bap (BAP), .../#sla (VIP).
   var start = location.hash.replace("#", "");
   activate(views[start] ? start : "aki", true);
